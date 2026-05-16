@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jammer", "Jammer\Jammer.csproj", "{F7455958-A3D9-478B-BA38-3A778A4EAA30}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "Client\Client.csproj", "{6BE3ECA8-C120-4A21-B8F2-10935B0ECDD4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F7455958-A3D9-478B-BA38-3A778A4EAA30}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7455958-A3D9-478B-BA38-3A778A4EAA30}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7455958-A3D9-478B-BA38-3A778A4EAA30}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7455958-A3D9-478B-BA38-3A778A4EAA30}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6BE3ECA8-C120-4A21-B8F2-10935B0ECDD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6BE3ECA8-C120-4A21-B8F2-10935B0ECDD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6BE3ECA8-C120-4A21-B8F2-10935B0ECDD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6BE3ECA8-C120-4A21-B8F2-10935B0ECDD4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
