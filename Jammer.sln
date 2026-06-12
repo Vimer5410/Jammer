@@ -1,8 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jammer", "Jammer\Jammer.csproj", "{F7455958-A3D9-478B-BA38-3A778A4EAA30}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server.Udp", "Server.Udp\Server.Udp.csproj", "{F7455958-A3D9-478B-BA38-3A778A4EAA30}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "Client\Client.csproj", "{6BE3ECA8-C120-4A21-B8F2-10935B0ECDD4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client.Udp", "Client.Udp\Client.Udp.csproj", "{6BE3ECA8-C120-4A21-B8F2-10935B0ECDD4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jammer.Core", "Jammer.Core\Jammer.Core.csproj", "{C871E12F-A68B-4D54-92DD-1373D4EC09F6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client.Tcp", "Client.Tcp\Client.Tcp.csproj", "{AD0D5AA3-F79D-40B4-BDDE-902B0D1392CC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server.Tcp", "Server.Tcp\Server.Tcp.csproj", "{FD1587E8-A428-4AB9-A76A-2D56FA564089}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,5 +24,17 @@ Global
 		{6BE3ECA8-C120-4A21-B8F2-10935B0ECDD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6BE3ECA8-C120-4A21-B8F2-10935B0ECDD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6BE3ECA8-C120-4A21-B8F2-10935B0ECDD4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C871E12F-A68B-4D54-92DD-1373D4EC09F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C871E12F-A68B-4D54-92DD-1373D4EC09F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C871E12F-A68B-4D54-92DD-1373D4EC09F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C871E12F-A68B-4D54-92DD-1373D4EC09F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD0D5AA3-F79D-40B4-BDDE-902B0D1392CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD0D5AA3-F79D-40B4-BDDE-902B0D1392CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD0D5AA3-F79D-40B4-BDDE-902B0D1392CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD0D5AA3-F79D-40B4-BDDE-902B0D1392CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD1587E8-A428-4AB9-A76A-2D56FA564089}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD1587E8-A428-4AB9-A76A-2D56FA564089}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD1587E8-A428-4AB9-A76A-2D56FA564089}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD1587E8-A428-4AB9-A76A-2D56FA564089}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

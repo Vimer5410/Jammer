@@ -9,9 +9,9 @@ namespace Server;
 class Program
 {
     public static readonly string localIpAddress = "127.0.0.1";
-    public static int localPort { get; set; }
+    public static int localPort { get; private set; }
     
-    public static int port { get; set; }
+    public static int port { get; private set; }
     
     async static Task Main(string[] args)
     {
