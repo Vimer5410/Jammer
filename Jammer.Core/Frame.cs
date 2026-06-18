@@ -7,12 +7,13 @@ namespace Jammer.Core;
 public class Frame
 {
 
-    public static byte[] WriteFrame(byte[] data)
+    public static async Task WriteFrameAsync(Socket client,byte[] data)
     {
         byte[] frame = new byte[4];
         BinaryPrimitives.WriteInt32BigEndian(frame, data.Length);
         byte[] alldata = frame.Concat(data).ToArray();
-        return alldata;
+
+        await client.SendAsync(alldata);
     }
 
     public static async Task<byte[]> ReadFrameAsync(Socket client)
@@ -24,7 +25,7 @@ public class Frame
         return data;
     }
 
-    public static async Task<byte[]> ReadExactlyAsync(Socket socket, int byteCount)
+    private static async Task<byte[]> ReadExactlyAsync(Socket socket, int byteCount)
     {
         byte[] buffer = new byte[byteCount];
         int total=0;

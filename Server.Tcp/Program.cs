@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Jammer.Core;
 
 class Program
 {
@@ -13,12 +14,21 @@ class Program
     {
         Console.WriteLine("Введите порт для TCP соединения:");
         localPort = Convert.ToInt32(Console.ReadLine() switch{"" or null => "7777", string s => s}) ;
-
         await CreateTcpConnection();
+
+        while (true)
+        {
+            Socket client = await tcpSocket.AcceptAsync();
+            try
+            {
+                await Task.WhenAll(ReceiveMessageAsync(client), SendMessageAsync(client));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("клиент отключился: " + ex.Message);
+            }
+        }
         
-        Socket client = await tcpSocket.AcceptAsync();
-        
-        await Task.WhenAll(ReceiveMessageAsync(client), SendMessageAsync(client));
     }
 
     async static Task CreateTcpConnection()
@@ -40,12 +50,11 @@ class Program
     }
     async static Task ReceiveMessageAsync(Socket client)
     {
-        byte[] buffer = new byte[120];
-        
         while (true)
         {
-            int buffersize = await client.ReceiveAsync(buffer);
-            var message = Encoding.UTF8.GetString(buffer, 0, buffersize);
+            byte[] buffer = await Frame.ReadFrameAsync(client);
+            
+            var message = Encoding.UTF8.GetString(buffer);
             Console.WriteLine($"{message}");
         }
     }
@@ -56,10 +65,9 @@ class Program
         while (true)
         {
             string data = await Task.Run(() => Console.ReadLine());
-            
             if (string.IsNullOrEmpty(data)) continue;
             
-            await client.SendAsync(Encoding.UTF8.GetBytes("[Server]: " + data));
+            await Frame.WriteFrameAsync(client, Encoding.UTF8.GetBytes("[Server]: " + data));
         }
     }
 }

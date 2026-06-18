@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Jammer.Core;
 
 class Program
 {
@@ -47,11 +48,11 @@ class Program
     async static Task ReceiveMessageAsync()
     {
         
-        byte[] buffer = new byte[256];
         while (true)
         {
-            int buffersize = await tcpSocket.ReceiveAsync(buffer);
-            var message = Encoding.UTF8.GetString(buffer, 0, buffersize);
+            byte[] buffer = await Frame.ReadFrameAsync(tcpSocket);
+            
+            var message = Encoding.UTF8.GetString(buffer);
             Console.WriteLine($"{message}");
         }
     }
@@ -63,8 +64,16 @@ class Program
         {
             var data = await Task.Run(()=> Console.ReadLine());
             if (string.IsNullOrEmpty(data)) continue;
+            if (data == "/exit")
+            {
+                tcpSocket.Shutdown(SocketShutdown.Both);
+                tcpSocket.Close();
+                Environment.Exit(0);
+            } 
             
-            await tcpSocket.SendAsync(Encoding.UTF8.GetBytes($"[{userName}]: " + data));
+            
+            
+            await Frame.WriteFrameAsync(tcpSocket,Encoding.UTF8.GetBytes($"[{userName}]: " + data));
         }
     }
 }
