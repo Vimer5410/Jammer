@@ -6,4 +6,8 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <PackageReference Include="NSec.Cryptography" Version="26.4.0" />
+    </ItemGroup>
+
 </Project>

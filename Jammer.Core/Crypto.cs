@@ -4,6 +4,8 @@ using System.Runtime.InteropServices.Marshalling;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
+using NSec.Cryptography;
+
 
 namespace Jammer.Core;
 
@@ -62,5 +64,92 @@ public class Crypto
         }
         
         
+    }
+
+    public class ECDH
+    {
+        private static KeyAgreementAlgorithm algorithm;
+        
+        private static Key userPrivateKey;
+        private static Key serverPrivateKey;
+    
+        private static PublicKey userPublicKey;
+        private static PublicKey serverPublicKey;
+        
+
+        public static void ServerKeyGeneration()
+        {
+            algorithm = KeyAgreementAlgorithm.X25519;
+            KeyCreationParameters keyCreationParameters = new KeyCreationParameters
+                { ExportPolicy = KeyExportPolicies.AllowPlaintextExport };
+            
+            serverPrivateKey = Key.Create(algorithm, keyCreationParameters);
+            serverPublicKey = serverPrivateKey.PublicKey;
+        }
+        public static void UserKeyGeneration()
+        {
+            algorithm = KeyAgreementAlgorithm.X25519;
+            KeyCreationParameters keyCreationParameters = new KeyCreationParameters
+                { ExportPolicy = KeyExportPolicies.AllowPlaintextExport };
+            
+            userPrivateKey = Key.Create(algorithm, keyCreationParameters);
+            userPublicKey = userPrivateKey.PublicKey;
+        }
+
+        public static byte[] GetUserPublicKeyBytes()
+        {
+            byte[] userPublicKeyBytes = userPublicKey.Export(KeyBlobFormat.RawPublicKey);
+            
+            return userPublicKeyBytes; 
+        }
+
+        public static byte[] GetServerPublicKeyBytes()
+        {
+            byte[] serverPublicKeyBytes = serverPublicKey.Export(KeyBlobFormat.RawPublicKey);
+
+            return serverPublicKeyBytes;
+        }
+
+        public static PublicKey ImportUserPublicKey()
+        {
+            try
+            {
+                return PublicKey.Import(algorithm, GetUserPublicKeyBytes(), KeyBlobFormat.RawPublicKey);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Критическая ошибка: не удалось импортировать ключ пользователя", ex);
+            }
+        }
+
+        public static PublicKey ImportServerPublicKey()
+        {
+            try
+            {
+                return PublicKey.Import(algorithm, GetServerPublicKeyBytes(), KeyBlobFormat.RawPublicKey);
+            }
+            catch (Exception ex)
+            {
+                
+                throw new InvalidOperationException("Критическая ошибка: не удалось импортировать ключ сервера", ex);
+            }
+        }
+
+        public static SharedSecret CreateServerSecret(PublicKey importUserPublicKey)
+        {
+            using (SharedSecret serverSecret = algorithm.Agree(serverPrivateKey, importUserPublicKey))
+            {
+                return serverSecret;
+            };
+            
+        }
+
+        public static SharedSecret CreateUserSecret()
+        {
+            using (SharedSecret userSecret = algorithm.Agree(userPrivateKey, ImportServerPublicKey()))
+            {
+                return userSecret;
+            }
+        }
     }
 }
