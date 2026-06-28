@@ -10,6 +10,8 @@ class Program
 
     private static Socket tcpSocket;
 
+    private static byte[] key = new byte[32];
+
     static async Task Main(string[] args)
     {
         Console.WriteLine("Введите порт для TCP соединения:");
@@ -40,6 +42,7 @@ class Program
         {
             tcpSocket.Bind(serverEndPoint);
             tcpSocket.Listen();
+            key = await CreateAesKey();
             Console.WriteLine("==========TCP соедение установлено=======");
         }
         catch (Exception ex)
@@ -54,21 +57,33 @@ class Program
         {
             byte[] buffer = await Frame.ReadFrameAsync(client);
             
-            var message = Encoding.UTF8.GetString(buffer);
+            var message = Encoding.UTF8.GetString(Crypto.AES.Decrypt(buffer, key));
             Console.WriteLine($"{message}");
         }
     }
 
     async static Task SendMessageAsync(Socket client)
     {
-        
         while (true)
         {
-            string data = await Task.Run(() => Console.ReadLine());
-            if (string.IsNullOrEmpty(data)) continue;
+            string input = await Task.Run(() => Console.ReadLine());
+            if (string.IsNullOrEmpty(input)) continue;
             
-            await Frame.WriteFrameAsync(client, Encoding.UTF8.GetBytes("[Server]: " + data));
+            string fullMessage = $"[Server]: {input}";
+            var data = Crypto.AES.Encrypt(fullMessage, key);
+            
+            await Frame.WriteFrameAsync(client, data);
         }
+    }
+    
+    
+    async static Task<byte[]> CreateAesKey()
+    {
+        Crypto.ECDH ecdh = new Crypto.ECDH();
+        await ecdh.SendLocalPublickeyAsync(tcpSocket);
+        var clientPublicKey = await ecdh.ReceiveRemotePublicKeyAsync(tcpSocket);
+        var aesKey= ecdh.CreateSecret(clientPublicKey);
+        return aesKey;
     }
 }
 

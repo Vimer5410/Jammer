@@ -1,10 +1,13 @@
 ﻿using System.Net.Security;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
 using NSec.Cryptography;
+using PublicKey = NSec.Cryptography.PublicKey;
 
 
 namespace Jammer.Core;
@@ -16,15 +19,9 @@ public class Crypto
         private const int nonceSize= 12;
         private const int tagSize = 16;
         
-        private static readonly byte[] key = new byte[32] { 
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-            17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32 
-        };
         
         
-        
-        
-        public static byte[] Encrypt(string data)
+        public static byte[] Encrypt(string data, byte[] key)
         {
             byte[] nonce = new byte[nonceSize];
             byte[] tag = new byte[tagSize];
@@ -44,7 +41,7 @@ public class Crypto
             return finalPackage;
         }
 
-        public static byte[] Decrypt(byte[] encryptedData)
+        public static byte[] Decrypt(byte[] encryptedData, byte[] key)
         {
             
             int encryptedDataLenght = encryptedData.Length - nonceSize - tagSize;
@@ -68,87 +65,123 @@ public class Crypto
 
     public class ECDH
     {
-        private static KeyAgreementAlgorithm algorithm;
+        private KeyAgreementAlgorithm _algorithm = KeyAgreementAlgorithm.X25519;
         
-        private static Key userPrivateKey;
-        private static Key serverPrivateKey;
+        private Key _privateKey;
     
-        private static PublicKey userPublicKey;
-        private static PublicKey serverPublicKey;
+        private PublicKey _publicKey;
+
+        private void KeyGeneration()
+        {
+            KeyCreationParameters keyCreationParameters = new KeyCreationParameters
+                { ExportPolicy = KeyExportPolicies.AllowPlaintextExport };
+            
+            _privateKey = Key.Create(_algorithm, keyCreationParameters);
+            _publicKey = _privateKey.PublicKey;
+        }
         
-
-        public static void ServerKeyGeneration()
+        private byte[] GetPublicKeyBytes()
         {
-            algorithm = KeyAgreementAlgorithm.X25519;
-            KeyCreationParameters keyCreationParameters = new KeyCreationParameters
-                { ExportPolicy = KeyExportPolicies.AllowPlaintextExport };
+            if (_publicKey == null)
+            {
+                throw new InvalidOperationException("Критическая ошибка: публичный ключ отсутствует или не сгенерирован");
+            }
             
-            serverPrivateKey = Key.Create(algorithm, keyCreationParameters);
-            serverPublicKey = serverPrivateKey.PublicKey;
-        }
-        public static void UserKeyGeneration()
-        {
-            algorithm = KeyAgreementAlgorithm.X25519;
-            KeyCreationParameters keyCreationParameters = new KeyCreationParameters
-                { ExportPolicy = KeyExportPolicies.AllowPlaintextExport };
+            byte[] publicKeyBytes = _publicKey.Export(KeyBlobFormat.RawPublicKey);
             
-            userPrivateKey = Key.Create(algorithm, keyCreationParameters);
-            userPublicKey = userPrivateKey.PublicKey;
+            return publicKeyBytes; 
         }
-
-        public static byte[] GetUserPublicKeyBytes()
+        
+        
+        private PublicKey ImportPublicKey(byte[] publicKeyBytes)
         {
-            byte[] userPublicKeyBytes = userPublicKey.Export(KeyBlobFormat.RawPublicKey);
+            if (publicKeyBytes == null || publicKeyBytes.Length!=32)
+            {
+                int actualLength = publicKeyBytes?.Length ?? 0;
+                throw new ArgumentNullException($"Критическая ошибка: публичный ключ отсутствует или неверной длины {actualLength}");
+            }
             
-            return userPublicKeyBytes; 
-        }
-
-        public static byte[] GetServerPublicKeyBytes()
-        {
-            byte[] serverPublicKeyBytes = serverPublicKey.Export(KeyBlobFormat.RawPublicKey);
-
-            return serverPublicKeyBytes;
-        }
-
-        public static PublicKey ImportUserPublicKey()
-        {
             try
             {
-                return PublicKey.Import(algorithm, GetUserPublicKeyBytes(), KeyBlobFormat.RawPublicKey);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Критическая ошибка: не удалось импортировать ключ пользователя", ex);
-            }
-        }
-
-        public static PublicKey ImportServerPublicKey()
-        {
-            try
-            {
-                return PublicKey.Import(algorithm, GetServerPublicKeyBytes(), KeyBlobFormat.RawPublicKey);
+                return PublicKey.Import(_algorithm, publicKeyBytes, KeyBlobFormat.RawPublicKey);
             }
             catch (Exception ex)
             {
                 
-                throw new InvalidOperationException("Критическая ошибка: не удалось импортировать ключ сервера", ex);
+                throw new InvalidOperationException("Критическая ошибка: не удалось импортировать ключ", ex);
             }
         }
 
-        public static SharedSecret CreateServerSecret(PublicKey importUserPublicKey)
+        
+
+        public byte[] CreateSecret(PublicKey publicKey)
         {
-            using (SharedSecret serverSecret = algorithm.Agree(serverPrivateKey, importUserPublicKey))
+            if (_privateKey==null || publicKey==null)
             {
-                return serverSecret;
-            };
-            
+                throw new ArgumentNullException(
+                    "Критическая ошибка: не удалось создать общий секрет, приватный или публичный ключи отсутствуют");
+            }
+
+            using (SharedSecret secret = _algorithm.Agree(_privateKey, publicKey))
+            {
+                
+                byte[] salt = Array.Empty<byte>(); 
+                byte[] info = System.Text.Encoding.UTF8.GetBytes("Chating_AES_256_Key");
+                
+                byte[] aesKeyBytes = KeyDerivationAlgorithm.HkdfSha256.DeriveBytes(secret, salt, info, 32);
+        
+                return aesKeyBytes;
+            }
         }
 
-        public static SharedSecret CreateUserSecret()
+        public async Task SendLocalPublickeyAsync(Socket client)
         {
-            using (SharedSecret userSecret = algorithm.Agree(userPrivateKey, ImportServerPublicKey()))
+            if (client == null)
             {
-                return userSecret;
+                throw new ArgumentNullException("[ECDH] передан пустой сокет client");
+            }
+
+            if (!client.Connected)
+            {
+                throw new InvalidOperationException("[ECDH] Соединение не установлено");
+            }
+
+            try
+            {
+                KeyGeneration();
+                byte[] buffer= GetPublicKeyBytes();
+                await client.SendAsync(buffer);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ECDH] {ex}");
+                throw;
+            }
+        }
+
+        public async Task<PublicKey> ReceiveRemotePublicKeyAsync(Socket client)
+        {
+            if (client==null)
+            {
+                throw new ArgumentNullException("[ECDH] передан пустой сокет client");
+            }
+
+            if (!client.Connected)
+            {
+                throw new InvalidOperationException("[ECDH] Соединение не установлено");
+            }
+
+            byte[] buffer = new byte[32];
+            try
+            {
+                await client.ReceiveAsync(buffer, SocketFlags.None);
+                return ImportPublicKey(buffer);
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ECDH] {ex}");
+                throw;
             }
         }
     }

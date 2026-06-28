@@ -11,6 +11,8 @@ class Program
     private static string? userName { get; set; }
 
     private static Socket tcpSocket;
+
+    private static byte[] key = new byte[32];
     
     async static Task Main(string[] args)
     {
@@ -36,6 +38,7 @@ class Program
         try
         {
             await tcpSocket.ConnectAsync(serverEndPoint);
+            key = await CreateAesKey();
             Console.WriteLine("==========TCP соедение установлено=======");
         }
         catch (Exception ex)
@@ -47,12 +50,11 @@ class Program
 
     async static Task ReceiveMessageAsync()
     {
-        
         while (true)
         {
             byte[] buffer = await Frame.ReadFrameAsync(tcpSocket);
             
-            var message = Encoding.UTF8.GetString(buffer);
+            var message = Encoding.UTF8.GetString(Crypto.AES.Decrypt(buffer, key));
             Console.WriteLine($"{message}");
         }
     }
@@ -62,18 +64,29 @@ class Program
         
         while (true)
         {
-            var data = await Task.Run(()=> Console.ReadLine());
-            if (string.IsNullOrEmpty(data)) continue;
-            if (data == "/exit")
+            var input = await Task.Run(()=> Console.ReadLine());
+            if (string.IsNullOrEmpty(input)) continue;
+            
+            string fullMessage = $"[{userName}]: {input}";
+            var data = Crypto.AES.Encrypt(fullMessage, key);
+            if (input == "/exit")
             {
                 tcpSocket.Shutdown(SocketShutdown.Both);
                 tcpSocket.Close();
                 Environment.Exit(0);
             } 
             
-            
-            
-            await Frame.WriteFrameAsync(tcpSocket,Encoding.UTF8.GetBytes($"[{userName}]: " + data));
+            await Frame.WriteFrameAsync(tcpSocket,data);
         }
+    }
+    
+    
+    async static Task<byte[]> CreateAesKey()
+    {
+        Crypto.ECDH ecdh = new Crypto.ECDH();
+        await ecdh.SendLocalPublickeyAsync(tcpSocket);
+        var serverPublicKey = await ecdh.ReceiveRemotePublicKeyAsync(tcpSocket);
+        var aesKey= ecdh.CreateSecret(serverPublicKey);
+        return aesKey;
     }
 }
