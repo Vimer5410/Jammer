@@ -65,7 +65,7 @@ public class Crypto
 
     public class ECDH
     {
-        private KeyAgreementAlgorithm _algorithm = KeyAgreementAlgorithm.X25519;
+        private readonly KeyAgreementAlgorithm _algorithm = KeyAgreementAlgorithm.X25519;
         
         private Key _privateKey;
     
@@ -80,6 +80,7 @@ public class Crypto
             _publicKey = _privateKey.PublicKey;
         }
         
+        //PublicKey --> bytes
         private byte[] GetPublicKeyBytes()
         {
             if (_publicKey == null)
@@ -93,6 +94,7 @@ public class Crypto
         }
         
         
+        //bytes --> PublicKey
         private PublicKey ImportPublicKey(byte[] publicKeyBytes)
         {
             if (publicKeyBytes == null || publicKeyBytes.Length!=32)
@@ -114,7 +116,7 @@ public class Crypto
 
         
 
-        public byte[] CreateSecret(PublicKey publicKey)
+        private byte[] CreateSecret(PublicKey publicKey)
         {
             if (_privateKey==null || publicKey==null)
             {
@@ -124,9 +126,9 @@ public class Crypto
 
             using (SharedSecret secret = _algorithm.Agree(_privateKey, publicKey))
             {
-                
-                byte[] salt = Array.Empty<byte>(); 
-                byte[] info = System.Text.Encoding.UTF8.GetBytes("Chating_AES_256_Key");
+                //fix: сделать случайную соль и обмен ею
+                byte[] salt = Array.Empty<byte>();
+                byte[] info = Encoding.UTF8.GetBytes("jammer-session-key");
                 
                 byte[] aesKeyBytes = KeyDerivationAlgorithm.HkdfSha256.DeriveBytes(secret, salt, info, 32);
         
@@ -134,7 +136,7 @@ public class Crypto
             }
         }
 
-        public async Task SendLocalPublickeyAsync(Socket client)
+        private async Task SendLocalPublickeyAsync(Socket client)
         {
             if (client == null)
             {
@@ -159,7 +161,7 @@ public class Crypto
             }
         }
 
-        public async Task<PublicKey> ReceiveRemotePublicKeyAsync(Socket client)
+        private async Task<PublicKey> ReceiveRemotePublicKeyAsync(Socket client)
         {
             if (client==null)
             {
@@ -183,6 +185,32 @@ public class Crypto
                 Console.WriteLine($"[ECDH] {ex}");
                 throw;
             }
+        }
+        
+        
+        public async Task<byte[]> CreateAesKey(Socket client, bool isServer)
+        {
+            if (client == null)
+                throw new ArgumentNullException("[ECDH] передан пустой сокет client");
+            if (!client.Connected)
+                throw new InvalidOperationException("[ECDH] Соединение не установлено");
+            
+            byte[] aesKey = new byte[32];
+            
+            if (isServer)
+            {
+                var clientPublicKey = await ReceiveRemotePublicKeyAsync(client);
+                await SendLocalPublickeyAsync(client);
+                aesKey = CreateSecret(clientPublicKey);
+            }
+            else
+            {
+                await SendLocalPublickeyAsync(client);
+                var clientPublicKey = await ReceiveRemotePublicKeyAsync(client);
+                aesKey = CreateSecret(clientPublicKey);
+            }
+            
+            return aesKey;
         }
     }
 }
