@@ -38,8 +38,11 @@ class Program
         try
         {
             await tcpSocket.ConnectAsync(serverEndPoint);
-            key = await CreateAesKey();
             Console.WriteLine("==========TCP соедение установлено=======");
+            
+            //вычисляем AES ключ по общему секрету
+            Crypto.ECDH ecdh = new Crypto.ECDH();
+            key = await ecdh.CreateAesKey(tcpSocket, false);
         }
         catch (Exception ex)
         { 
@@ -69,6 +72,7 @@ class Program
             
             string fullMessage = $"[{userName}]: {input}";
             var data = Crypto.AES.Encrypt(fullMessage, key);
+            
             if (input == "/exit")
             {
                 tcpSocket.Shutdown(SocketShutdown.Both);
@@ -80,13 +84,4 @@ class Program
         }
     }
     
-    
-    async static Task<byte[]> CreateAesKey()
-    {
-        Crypto.ECDH ecdh = new Crypto.ECDH();
-        await ecdh.SendLocalPublickeyAsync(tcpSocket);
-        var serverPublicKey = await ecdh.ReceiveRemotePublicKeyAsync(tcpSocket);
-        var aesKey= ecdh.CreateSecret(serverPublicKey);
-        return aesKey;
-    }
 }
