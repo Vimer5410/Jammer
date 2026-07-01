@@ -20,7 +20,7 @@ public class Crypto
         private const int tagSize = 16;
         
         
-        
+        //fix: добавить перегрузку метода для byte[] data
         public static byte[] Encrypt(string data, byte[] key)
         {
             byte[] nonce = new byte[nonceSize];
@@ -188,6 +188,7 @@ public class Crypto
         }
         
         
+        //fix: перенести метод с зависимостями в класс AES
         public async Task<byte[]> CreateAesKey(Socket client, bool isServer)
         {
             if (client == null)
