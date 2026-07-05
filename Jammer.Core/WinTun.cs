@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Jammer.Core;
 
@@ -7,6 +8,9 @@ public class WinTun
     [DllImport("wintun.dll")]
     static extern uint WintunGetRunningDriverVersion();
 
+    private static readonly Guid _guid = new Guid("12345678-1234-1234-1234-123456789abc");
+
+    private static IntPtr _tunAdapter= IntPtr.Zero;
     public static void WinTunTest()
     {
         try
@@ -25,8 +29,8 @@ public class WinTun
     }
 
     // работа с адаптером
-    [DllImport("wintun.dll", CharSet = CharSet.Unicode)]
-    public static extern IntPtr WintunCreateAdapter
+    [DllImport("wintun.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr WintunCreateAdapter
     (
         string name,
         string tunnelType,
@@ -34,22 +38,27 @@ public class WinTun
     );
 
     [DllImport("wintun.dll")]
-    public static extern void WintunCloseAdapter
+    private static extern void WintunCloseAdapter
     (
         IntPtr adapter
     );
 
+    [DllImport("wintun.dll")]
+    public static extern IntPtr WintunOpenAdapter
+    (
+        string name
+    );
     
     // работа с сессией
     [DllImport("wintun.dll")]
-    public static extern IntPtr WintunStartSession
+    private static extern IntPtr WintunStartSession
     (
         IntPtr adapter,
         uint capacity
     );
 
     [DllImport("wintun.dll")]
-    public static extern void WintunEndSession
+    private static extern void WintunEndSession
     (
         IntPtr session
     );
@@ -57,30 +66,93 @@ public class WinTun
     
     // работа с сетью и пакетами
     [DllImport("wintun.dll")]
-    public static extern void WintunSendPacket
+    private static extern void WintunSendPacket
     (
         IntPtr session,
         IntPtr packet
     );
 
     [DllImport("wintun.dll")]
-    public static extern IntPtr WintunReceivePacket
+    private static extern IntPtr WintunReceivePacket
     (
         IntPtr session,
         out uint packetSize
     );
 
     [DllImport("wintun.dll")]
-    public static extern void WintunReleaseReceivePacket
+    private static extern void WintunReleaseReceivePacket
     (
         IntPtr session,
         IntPtr packet
     );
 
     [DllImport("wintun.dll")]
-    public static extern IntPtr WintunAllocateSendPacket
+    private static extern IntPtr WintunAllocateSendPacket
     (
         IntPtr session,
         uint packetSize
     );
+
+
+    public static IntPtr InitializeTunnel()
+    {
+        IntPtr requestedGUID = Marshal.AllocHGlobal(Marshal.SizeOf(_guid));
+
+        try
+        {
+            Marshal.StructureToPtr(_guid, requestedGUID, false);
+            _tunAdapter = WintunCreateAdapter("JammerTun", "Jammer", requestedGUID);
+            
+            if (_tunAdapter == IntPtr.Zero)
+            {
+                var errorCode = Marshal.GetLastWin32Error();
+                throw new InvalidProgramException($"[WinTun] не удалось создать виртуальный адаптер, код ошибки {errorCode}");
+            }
+            else
+            {
+                Console.WriteLine("[WinTun] адаптер успешно создан");
+            }
+
+            return _tunAdapter;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WinTun] {ex}");
+            throw;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(requestedGUID);
+        }
+    }
+
+    public static async void ConfigureIpAddress(string ipAddress, string mask)
+    {
+        ProcessStartInfo processStartInfo = new ProcessStartInfo();
+        processStartInfo.FileName = "netsh";
+        processStartInfo.Arguments = $"interface ipv4 set address name=\"JammerTun\" source=static addr={ipAddress} mask={mask} gateway=none";
+        processStartInfo.CreateNoWindow = true;
+        processStartInfo.Verb = "runas";
+        processStartInfo.UseShellExecute = true;
+
+        await Task.Delay(1000);
+        using (Process process = Process.Start(processStartInfo))
+        {
+            if (process==null)
+            {
+                throw new InvalidOperationException("[WinTun] Не удалалось запустить процесс netsh");
+            }
+
+            process.WaitForExit();
+
+            if (process.ExitCode!=0)
+            {
+                throw new InvalidOperationException($"netsh завершился с ошибкой. Код: {process.ExitCode}");
+            }
+
+            Console.WriteLine("[WinTun] ipAddress успешно задан для виртуального адаптера");
+        }
+
+    }
+    
 }

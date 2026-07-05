@@ -13,7 +13,8 @@ class Program
     private static Socket tcpSocket;
 
     private static byte[] key = new byte[32];
-    
+
+    private static IntPtr _tunAdapter = IntPtr.Zero; 
     async static Task Main(string[] args)
     {
         var rand = new Random();
@@ -23,7 +24,12 @@ class Program
         serverPort = Convert.ToInt32(Console.ReadLine() switch { "" or null => "7777", string s => s });
         Console.WriteLine("Введите ваше имя:");
         userName = Console.ReadLine() switch{"" or null => $"User {rand.Next(1000, 9999)}", string s => s};
-
+        
+        _tunAdapter=WinTun.InitializeTunnel();
+        Console.WriteLine($"!!! {_tunAdapter}");
+        WinTun.ConfigureIpAddress("255.255.255.0", "255.255.255.0");
+        
+        
         await CreateTcpConnection();
         
         await Task.WhenAll(ReceiveMessageAsync(),SendMessageAsync());
