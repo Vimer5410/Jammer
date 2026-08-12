@@ -11,6 +11,15 @@ public class WinTun
     private static readonly Guid _guid = new Guid("12345678-1234-1234-1234-123456789abc");
 
     private static IntPtr _tunAdapter= IntPtr.Zero;
+    
+    private static IntPtr _session = IntPtr.Zero;
+    
+    private static IntPtr _receivedPackets = IntPtr.Zero;
+    
+    private const uint _capacity = 0x2000000;      /* 32мб */
+
+    private static uint _packetSize = 0xFFFF;
+        
     public static void WinTunTest()
     {
         try
@@ -50,7 +59,7 @@ public class WinTun
     );
     
     // работа с сессией
-    [DllImport("wintun.dll")]
+    [DllImport("wintun.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr WintunStartSession
     (
         IntPtr adapter,
@@ -72,7 +81,7 @@ public class WinTun
         IntPtr packet
     );
 
-    [DllImport("wintun.dll")]
+    [DllImport("wintun.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr WintunReceivePacket
     (
         IntPtr session,
@@ -93,6 +102,10 @@ public class WinTun
         uint packetSize
     );
 
+
+    /// <summary>
+    /// инициализация WinTun интерфейса
+    /// </summary>
 
     public static IntPtr InitializeTunnel()
     {
@@ -126,6 +139,10 @@ public class WinTun
         }
     }
 
+    /// <summary>
+    /// Привязка метаданных к WinTun интерфейсу
+    /// </summary>
+
     public static async void ConfigureIpAddress(string ipAddress, string mask)
     {
         ProcessStartInfo processStartInfo = new ProcessStartInfo();
@@ -133,7 +150,11 @@ public class WinTun
         processStartInfo.Arguments = $"interface ipv4 set address name=\"JammerTun\" source=static addr={ipAddress} mask={mask} gateway=none";
         processStartInfo.CreateNoWindow = true;
         processStartInfo.Verb = "runas";
-        processStartInfo.UseShellExecute = true;
+        processStartInfo.UseShellExecute = false;
+        
+        //добавляем логирование ошибок
+        processStartInfo.RedirectStandardOutput = true;
+        processStartInfo.RedirectStandardError = true;
 
         await Task.Delay(1000);
         using (Process process = Process.Start(processStartInfo))
@@ -145,6 +166,21 @@ public class WinTun
 
             process.WaitForExit();
 
+            //fix: код ошибки 183, при каждом втором перезапуске почему то выкидывает 183,
+            //будто адаптер уже создан, однако в диспетчере устройств его нет
+            
+            // читаем и выводим полный лог ошибки вместо старого "код ошибки 183....."
+            string error = process.StandardError.ReadToEnd();
+            string output = process.StandardOutput.ReadToEnd();
+            if (!string.IsNullOrEmpty(error))
+            {
+                Console.WriteLine($"[netsh stdError] {error}");
+            }
+            if (!string.IsNullOrEmpty(output))
+            {
+                Console.WriteLine($"[netsh stdOut] {output}");
+            }
+
             if (process.ExitCode!=0)
             {
                 throw new InvalidOperationException($"netsh завершился с ошибкой. Код: {process.ExitCode}");
@@ -154,5 +190,50 @@ public class WinTun
         }
 
     }
-    
+
+/// <summary>
+/// Запуск сессии чтения/записи пакетов
+/// </summary>
+
+    public static IntPtr StartSession()
+    {
+        try
+        {
+            _session = WintunStartSession(_tunAdapter, _capacity);
+
+            if (_session == IntPtr.Zero)
+            {
+                var errorCode = Marshal.GetLastWin32Error();
+                throw new InvalidProgramException($"[WinTun] не удалось открыть сессию, код ошибки: {errorCode}");
+            }
+            else
+            {
+                Console.WriteLine("[WinTun] сессия успешно создана");
+            }
+
+            return _session;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WinTun] {ex}");
+            throw;
+        }
+        
+    }
+
+    public static void SendPacket()
+    {
+        
+    }
+
+    public static IntPtr ReceivePacket()
+    {
+        _receivedPackets = WintunReceivePacket(_session, out _packetSize);
+        if (_receivedPackets == IntPtr.Zero)
+        {
+            throw new NullReferenceException("[WinTun] получено 0 байт");
+        }
+        
+        return _receivedPackets;
+    }
 }

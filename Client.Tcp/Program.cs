@@ -27,8 +27,11 @@ class Program
         
         _tunAdapter=WinTun.InitializeTunnel();
         Console.WriteLine($"!!! {_tunAdapter}");
-        WinTun.ConfigureIpAddress("255.255.255.0", "255.255.255.0");
         
+        //fix: проблема ip 10.0.0.2
+        WinTun.ConfigureIpAddress("10.0.0.2", "255.255.255.0");
+
+        WinTun.StartSession();
         
         await CreateTcpConnection();
         
