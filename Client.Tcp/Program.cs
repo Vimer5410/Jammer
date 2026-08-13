@@ -28,14 +28,15 @@ class Program
         _tunAdapter=WinTun.InitializeTunnel();
         Console.WriteLine($"!!! {_tunAdapter}");
         
-        //fix: проблема ip 10.0.0.2
-        WinTun.ConfigureIpAddress("10.0.0.2", "255.255.255.0");
-
+        
         WinTun.StartSession();
+        //fix: проблема ip 10.0.0.2
+        await WinTun.ConfigureIpAddress("172.16.0.2", "255.255.255.0");
         
+        
+        //ping 172.16.0.1 -l 1000
         await CreateTcpConnection();
-        
-        await Task.WhenAll(ReceiveMessageAsync(),SendMessageAsync());
+        await Task.WhenAll(ReceiveMessageAsync(), SendMessageAsync());
         
     }
 
@@ -66,8 +67,9 @@ class Program
         {
             byte[] buffer = await Frame.ReadFrameAsync(tcpSocket);
             
-            var message = Encoding.UTF8.GetString(Crypto.AES.Decrypt(buffer, key));
-            Console.WriteLine($"{message}");
+            var data = Crypto.AES.Decrypt(buffer, key);
+            WinTun.SendPacket(data);
+            Console.WriteLine($"{data}");
         }
     }
 
@@ -76,18 +78,10 @@ class Program
         
         while (true)
         {
-            var input = await Task.Run(()=> Console.ReadLine());
-            if (string.IsNullOrEmpty(input)) continue;
+            var input = WinTun.ReceivePacket();
+            if (input == null) continue;
             
-            string fullMessage = $"[{userName}]: {input}";
-            var data = Crypto.AES.Encrypt(fullMessage, key);
-            
-            if (input == "/exit")
-            {
-                tcpSocket.Shutdown(SocketShutdown.Both);
-                tcpSocket.Close();
-                Environment.Exit(0);
-            } 
+            var data = Crypto.AES.Encrypt(input, key);
             
             await Frame.WriteFrameAsync(tcpSocket,data);
         }

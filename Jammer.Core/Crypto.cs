@@ -35,7 +35,28 @@ public class Crypto
             {
                 _aesGcm.Encrypt(nonce, dataBytes, encryptedData, tag);
             }
+            var finalPackage = nonce.Concat(encryptedData).Concat(tag).ToArray();
             
+            return finalPackage;
+        }
+        
+        public static byte[] Encrypt(byte[] data, byte[] key)
+        {
+            byte[] nonce = new byte[nonceSize];
+            byte[] tag = new byte[tagSize];
+            
+            RandomNumberGenerator.Fill(nonce);
+            if (data==null)
+            {
+                throw new NullReferenceException("[Crypto] массив байт data пустой");
+            }
+            
+            byte[] encryptedData = new byte[data.Length];
+            
+            using (AesGcm _aesGcm = new AesGcm(key,tagSizeInBytes:16))
+            {
+                _aesGcm.Encrypt(nonce, data, encryptedData, tag);
+            }
             var finalPackage = nonce.Concat(encryptedData).Concat(tag).ToArray();
             
             return finalPackage;
