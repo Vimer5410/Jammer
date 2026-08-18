@@ -11,4 +11,9 @@
       <ProjectReference Include="..\Jammer.Core\Jammer.Core.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Include="..\wintun.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
 </Project>

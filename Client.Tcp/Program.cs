@@ -69,7 +69,7 @@ class Program
             
             var data = Crypto.AES.Decrypt(buffer, key);
             WinTun.SendPacket(data);
-            Console.WriteLine($"{data}");
+            Console.WriteLine($"Получено {data.Length} байт");
         }
     }
 
@@ -82,8 +82,9 @@ class Program
             if (input == null) continue;
             
             var data = Crypto.AES.Encrypt(input, key);
-            
             await Frame.WriteFrameAsync(tcpSocket,data);
+            
+            Console.WriteLine($"Отправлено {data.Length} байт");
         }
     }
     

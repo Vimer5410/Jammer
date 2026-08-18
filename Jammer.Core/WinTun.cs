@@ -8,8 +8,8 @@ public class WinTun
     [DllImport("wintun.dll")]
     static extern uint WintunGetRunningDriverVersion();
 
-    private static readonly Guid _guid = new Guid("12345678-1234-1234-1234-123456789abc");
-
+    private static readonly Guid _guid = Guid.NewGuid();
+    
     private static IntPtr _tunAdapter= IntPtr.Zero;
     
     private static IntPtr _session = IntPtr.Zero;
@@ -109,17 +109,35 @@ public class WinTun
 
     public static IntPtr InitializeTunnel()
     {
+        
         IntPtr requestedGUID = Marshal.AllocHGlobal(Marshal.SizeOf(_guid));
-
+        
         try
         {
             Marshal.StructureToPtr(_guid, requestedGUID, false);
+            WintunCloseAdapter(_tunAdapter);
+            
             _tunAdapter = WintunCreateAdapter("JammerTun", "Jammer", requestedGUID);
             
             if (_tunAdapter == IntPtr.Zero)
             {
                 var errorCode = Marshal.GetLastWin32Error();
-                throw new InvalidProgramException($"[WinTun] не удалось создать виртуальный адаптер, код ошибки {errorCode}");
+
+                if (errorCode==183)
+                {
+                    Console.WriteLine("[WinTun] адаптер уже существует в системе, переподключаемся...");
+                    _tunAdapter = WintunOpenAdapter("JammerTun");
+                }
+                
+                if (errorCode == 5)
+                {
+                    throw new UnauthorizedAccessException("[WinTun] запустите приложение от имени администратора!");
+                }
+
+                if (_tunAdapter == IntPtr.Zero)
+                {
+                    throw new InvalidProgramException($"[WinTun] не удалось создать виртуальный адаптер, код ошибки {errorCode}");
+                }
             }
             else
             {

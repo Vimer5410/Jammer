@@ -12,10 +12,18 @@ class Program
 
     private static byte[] key = new byte[32];
 
+    private static IntPtr _tunAdapter = IntPtr.Zero; 
     static async Task Main(string[] args)
     {
         Console.WriteLine("Введите порт для TCP соединения:");
         localPort = Convert.ToInt32(Console.ReadLine() switch{"" or null => "7777", string s => s}) ;
+        
+        _tunAdapter=WinTun.InitializeTunnel();
+        Console.WriteLine($"!!! {_tunAdapter}");
+        
+        WinTun.StartSession();
+        await WinTun.ConfigureIpAddress("172.16.0.1", "255.255.255.0");
+        
         await CreateTcpConnection();
 
         while (true)
@@ -31,7 +39,7 @@ class Program
             }
             catch (Exception ex)
             {
-                Console.WriteLine("клиент отключился: " + ex.Message);
+                Console.WriteLine("[Server] клиент отключился: " + ex.Message);
             }
         }
         
@@ -50,7 +58,7 @@ class Program
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка: {ex.Message}");
+            Console.WriteLine($"[Server] ошибка: {ex.Message}");
             Environment.Exit(1);
         }
     }
@@ -59,9 +67,10 @@ class Program
         while (true)
         {
             byte[] buffer = await Frame.ReadFrameAsync(client);
-            
-            var message = Encoding.UTF8.GetString(Crypto.AES.Decrypt(buffer, key));
-            Console.WriteLine($"{message}");
+
+            var data = Crypto.AES.Decrypt(buffer, key);
+            WinTun.SendPacket(data);
+            Console.WriteLine($"[Server] получено {data.Length} байт");
         }
     }
 
@@ -69,11 +78,10 @@ class Program
     {
         while (true)
         {
-            string input = await Task.Run(() => Console.ReadLine());
-            if (string.IsNullOrEmpty(input)) continue;
+            var input = WinTun.ReceivePacket();
+            if (input==null) continue;
             
-            string fullMessage = $"[Server]: {input}";
-            var data = Crypto.AES.Encrypt(fullMessage, key);
+            var data = Crypto.AES.Encrypt(input, key);
             
             await Frame.WriteFrameAsync(client, data);
         }
