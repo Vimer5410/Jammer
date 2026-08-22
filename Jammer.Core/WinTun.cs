@@ -181,6 +181,7 @@ public class WinTun
                 throw new InvalidOperationException("[WinTun] Не удалалось запустить процесс netsh");
             }
 
+            var test = process.Threads;
             process.WaitForExit();
 
             //fix: код ошибки 183, при каждом втором перезапуске почему то выкидывает 183,
@@ -202,8 +203,8 @@ public class WinTun
             {
                 throw new InvalidOperationException($"netsh завершился с ошибкой. Код: {process.ExitCode}");
             }
-
-            Console.WriteLine("[WinTun] ipAddress успешно задан для виртуального адаптера");
+            
+            Console.WriteLine($"[WinTun] ipAddress успешно задан для виртуального адаптера {test.Count}");
         }
 
     }
