@@ -17,6 +17,18 @@ class Program
     private static IntPtr _tunAdapter = IntPtr.Zero; 
     async static Task Main(string[] args)
     {
+        AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
+        { 
+            Routing.Clean(serverIp, "JammerTun");
+        };
+
+        Console.CancelKeyPress += (sender, eventArgs) =>
+        {
+            eventArgs.Cancel = true;
+            Routing.Clean(serverIp,"JammerTun");
+            Environment.Exit(0);
+        };
+        
         var rand = new Random();
         Console.WriteLine("Введите ip сервера:");
         serverIp = Console.ReadLine() switch { "" or null => "127.0.0.1", string s => s };
@@ -32,14 +44,16 @@ class Program
         WinTun.StartSession();
         //fix: проблема ip 10.0.0.2
         await WinTun.ConfigureIpAddress("172.16.0.2", "255.255.255.0");
-        
+
+        await Routing.Route(serverIp, null, null);
+        await Routing.DNS();
         
         //ping 172.16.0.1 -l 1000
         await CreateTcpConnection();
         await Task.WhenAll(ReceiveMessageAsync(), SendMessageAsync());
         
     }
-
+    
     async static Task CreateTcpConnection()
     {
         tcpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);

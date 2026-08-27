@@ -11,7 +11,7 @@ public class Routing
     /// </summary>
     /// <param name="command"></param>
     /// <exception cref="InvalidOperationException"></exception>
-    private static async Task RunNetshAsync(string command)
+    private static void RunNetshAsync(string command)
     {
         ProcessStartInfo processStartInfo = new ProcessStartInfo();
         processStartInfo.FileName = "netsh";
@@ -27,7 +27,7 @@ public class Routing
                 throw new InvalidOperationException("[Routing] не удалалось запустить процесс netsh");
             }
 
-            await process.WaitForExitAsync();
+            process.WaitForExit();
             
             if (process.ExitCode != 0)
             {
@@ -93,13 +93,13 @@ public class Routing
             localInterface = networkInfo.interfaceName;
             localGatewayIp = networkInfo.gatewayIp;
         }
-        await RunNetshAsync(
+        RunNetshAsync(
             $"""interface ipv4 add route prefix={serverIp}/32 interface="{localInterface}" nexthop={localGatewayIp} store=active""");
         
-        await RunNetshAsync(
+        RunNetshAsync(
             """interface ipv4 add route prefix=0.0.0.0/1 interface="JammerTun" nexthop=172.16.0.1 metric=1 store=active""");
 
-        await RunNetshAsync(
+        RunNetshAsync(
             """interface ipv4 add route prefix=128.0.0.0/1 interface="JammerTun" nexthop=172.16.0.1 metric=1 store=active""");
         
     }
@@ -110,15 +110,15 @@ public class Routing
     /// </summary>
     /// <param name="serverIp"></param>
     /// <param name="localInterface"></param>
-    public static async Task Clean(string serverIp, string localInterface)
+    public static void Clean(string serverIp, string localInterface)
     {
-        await RunNetshAsync(
+        RunNetshAsync(
             $"""interface ipv4 delete route prefix={serverIp}/32 interface="{localInterface}" """);
 
-        await RunNetshAsync(
+        RunNetshAsync(
             """interface ipv4 delete route prefix=0.0.0.0/1 interface="JammerTun" """);
 
-        await RunNetshAsync(
+        RunNetshAsync(
             """interface ipv4 delete route prefix=128.0.0.0/1 interface="JammerTun" """);
         
     }
@@ -129,7 +129,7 @@ public class Routing
     /// </summary>
     public static async Task DNS()
     {
-        await RunNetshAsync(
+        RunNetshAsync(
             """interface ipv4 set dnsservers name="JammerTun" source=static address=1.1.1.1 register=none""");
         
     }
