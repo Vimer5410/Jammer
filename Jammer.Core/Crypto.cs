@@ -20,7 +20,6 @@ public class Crypto
         private const int tagSize = 16;
         
         
-        //fix: добавить перегрузку метода для byte[] data
         public static byte[] Encrypt(string data, byte[] key)
         {
             byte[] nonce = new byte[nonceSize];
@@ -174,6 +173,7 @@ public class Crypto
                 KeyGeneration();
                 byte[] buffer= GetPublicKeyBytes();
                 await client.SendAsync(buffer);
+                Console.WriteLine("[ECDH] публичный ключ отправлен");
             }
             catch (Exception ex)
             {
@@ -198,6 +198,7 @@ public class Crypto
             try
             {
                 await client.ReceiveAsync(buffer, SocketFlags.None);
+                Console.WriteLine("[ECDH] публичный ключ получен");
                 return ImportPublicKey(buffer);
 
             }

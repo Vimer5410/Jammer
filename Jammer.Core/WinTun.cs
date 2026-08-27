@@ -183,10 +183,7 @@ public class WinTun
 
             var test = process.Threads;
             process.WaitForExit();
-
-            //fix: код ошибки 183, при каждом втором перезапуске почему то выкидывает 183,
-            //будто адаптер уже создан, однако в диспетчере устройств его нет
-        
+            
             // читаем и выводим полный лог ошибки вместо старого "код ошибки 183....."
             string error = process.StandardError.ReadToEnd();
             string output = process.StandardOutput.ReadToEnd();

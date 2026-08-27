@@ -5,7 +5,7 @@ using Jammer.Core;
 
 class Program
 {
-    public static readonly string localIpAddress = "127.0.0.1";
+    public static readonly string localIpAddress = "192.168.31.166";
     public static int localPort { get; private set; }
 
     private static Socket tcpSocket;
@@ -29,6 +29,8 @@ class Program
         while (true)
         {
             Socket client = await tcpSocket.AcceptAsync();
+            Console.WriteLine("[Server] клиент принят: " + client.RemoteEndPoint);
+            
             try
             {
                 //вычисляем AES ключ по общему секрету
@@ -48,7 +50,7 @@ class Program
     async static Task CreateTcpConnection()
     {
         tcpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        var serverEndPoint = new IPEndPoint(IPAddress.Parse(localIpAddress), localPort);
+        var serverEndPoint = new IPEndPoint(IPAddress.Any, localPort);
         
         try
         {
