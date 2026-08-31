@@ -11,7 +11,7 @@ public class Routing
     /// </summary>
     /// <param name="command"></param>
     /// <exception cref="InvalidOperationException"></exception>
-    private static void RunNetshAsync(string command)
+    private static void RunNetsh(string command)
     {
         ProcessStartInfo processStartInfo = new ProcessStartInfo();
         processStartInfo.FileName = "netsh";
@@ -93,14 +93,20 @@ public class Routing
             localInterface = networkInfo.interfaceName;
             localGatewayIp = networkInfo.gatewayIp;
         }
-        RunNetshAsync(
+
+        Console.WriteLine(localInterface);
+        
+        RunNetsh(
+            """interface ipv4 set address name="JammerTun" static 192.168.137.2 255.255.255.0 192.168.137.1""");
+        
+        RunNetsh(
             $"""interface ipv4 add route prefix={serverIp}/32 interface="{localInterface}" nexthop={localGatewayIp} store=active""");
         
-        RunNetshAsync(
-            """interface ipv4 add route prefix=0.0.0.0/1 interface="JammerTun" nexthop=172.16.0.1 metric=1 store=active""");
+        RunNetsh(
+            """interface ipv4 add route prefix=0.0.0.0/1 interface="JammerTun" nexthop=192.168.137.1 metric=1 store=active""");
 
-        RunNetshAsync(
-            """interface ipv4 add route prefix=128.0.0.0/1 interface="JammerTun" nexthop=172.16.0.1 metric=1 store=active""");
+        RunNetsh(
+            """interface ipv4 add route prefix=128.0.0.0/1 interface="JammerTun" nexthop=192.168.137.1 metric=1 store=active""");
         
     }
 
@@ -112,13 +118,13 @@ public class Routing
     /// <param name="localInterface"></param>
     public static void Clean(string serverIp, string localInterface)
     {
-        RunNetshAsync(
+        RunNetsh(
             $"""interface ipv4 delete route prefix={serverIp}/32 interface="{localInterface}" """);
 
-        RunNetshAsync(
+        RunNetsh(
             """interface ipv4 delete route prefix=0.0.0.0/1 interface="JammerTun" """);
 
-        RunNetshAsync(
+        RunNetsh(
             """interface ipv4 delete route prefix=128.0.0.0/1 interface="JammerTun" """);
         
     }
@@ -129,7 +135,7 @@ public class Routing
     /// </summary>
     public static async Task DNS()
     {
-        RunNetshAsync(
+        RunNetsh(
             """interface ipv4 set dnsservers name="JammerTun" source=static address=1.1.1.1 register=none""");
         
     }

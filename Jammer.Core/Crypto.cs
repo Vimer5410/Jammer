@@ -211,29 +211,20 @@ public class Crypto
         
         
         //fix: перенести метод с зависимостями в класс AES
-        public async Task<byte[]> CreateAesKey(Socket client, bool isServer)
+        public async Task<byte[]> CreateAesKey(Socket client)
         {
-            if (client == null)
-                throw new ArgumentNullException("[ECDH] передан пустой сокет client");
-            if (!client.Connected)
+            if (client == null || !client.Connected)
                 throw new InvalidOperationException("[ECDH] Соединение не установлено");
-            
-            byte[] aesKey = new byte[32];
-            
-            if (isServer)
-            {
-                var clientPublicKey = await ReceiveRemotePublicKeyAsync(client);
-                await SendLocalPublickeyAsync(client);
-                aesKey = CreateSecret(clientPublicKey);
-            }
-            else
-            {
-                await SendLocalPublickeyAsync(client);
-                var clientPublicKey = await ReceiveRemotePublicKeyAsync(client);
-                aesKey = CreateSecret(clientPublicKey);
-            }
-            
-            return aesKey;
+
+            // запускаем отправку своего ключа и чтение чужого параллельно
+            // это исключает застревание, независимо от того кто сервер а кто клиент
+            var sendTask = SendLocalPublickeyAsync(client);
+            var receiveTask = ReceiveRemotePublicKeyAsync(client);
+
+            await Task.WhenAll(sendTask, receiveTask);
+
+            PublicKey remotePublicKey = await receiveTask;
+            return CreateSecret(remotePublicKey);
         }
     }
 }

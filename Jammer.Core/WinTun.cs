@@ -117,6 +117,8 @@ public class WinTun
             Marshal.StructureToPtr(_guid, requestedGUID, false);
             WintunCloseAdapter(_tunAdapter);
             
+            //fix: пересоздание адаптера каждый раз вызывает баг на стороне сервера, из за которого нужно каждый раз пробиваться через NAT
+            //единственное правильное решение, создавать адаптер один раз, и потом пытаться к нему подключиться, если его нет -  то создаем заново
             _tunAdapter = WintunCreateAdapter("JammerTun", "Jammer", requestedGUID);
             
             if (_tunAdapter == IntPtr.Zero)

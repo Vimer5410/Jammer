@@ -5,7 +5,6 @@ using Jammer.Core;
 
 class Program
 {
-    public static readonly string localIpAddress = "192.168.31.166";
     public static int localPort { get; private set; }
 
     private static Socket tcpSocket;
@@ -35,7 +34,7 @@ class Program
             {
                 //вычисляем AES ключ по общему секрету
                 Crypto.ECDH ecdh = new Crypto.ECDH();
-                key = await ecdh.CreateAesKey(client, true);
+                key = await ecdh.CreateAesKey(client);
                 
                 await Task.WhenAll(ReceiveMessageAsync(client), SendMessageAsync(client));
             }
@@ -66,7 +65,7 @@ class Program
     }
     async static Task ReceiveMessageAsync(Socket client)
     {
-        while (true)
+        while (client.Connected)
         {
             byte[] buffer = await Frame.ReadFrameAsync(client);
 
@@ -78,7 +77,7 @@ class Program
 
     async static Task SendMessageAsync(Socket client)
     {
-        while (true)
+        while (client.Connected)
         {
             var input = WinTun.ReceivePacket();
             if (input==null) continue;

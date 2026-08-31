@@ -8,6 +8,7 @@ class Program
     public static string serverIp { get; private set; }
     
     public static int serverPort { get; private set; }
+    
     private static string? userName { get; set; }
 
     private static Socket tcpSocket;
@@ -31,7 +32,7 @@ class Program
         
         var rand = new Random();
         Console.WriteLine("Введите ip сервера:");
-        serverIp = Console.ReadLine() switch { "" or null => "192.168.31.166", string s => s };
+        serverIp = Console.ReadLine() switch { "" or null => "192.168.31.176", string s => s };
         Console.WriteLine("Введите порт для TCP соединения:");
         serverPort = Convert.ToInt32(Console.ReadLine() switch { "" or null => "7777", string s => s });
         Console.WriteLine("Введите ваше имя:");
@@ -40,13 +41,14 @@ class Program
         _tunAdapter=WinTun.InitializeTunnel();
         Console.WriteLine($"!!! {_tunAdapter}");
         
-        
         WinTun.StartSession();
         
         await WinTun.ConfigureIpAddress("172.16.0.2", "255.255.255.0");
 
-        // await Routing.Route(serverIp, null, null);
-        // await Routing.DNS();
+         // await Task.Delay(3000);
+        
+         await Routing.Route(serverIp, null, null);
+         await Routing.DNS();
         
         //ping 172.16.0.1 -l 1000
         await CreateTcpConnection();
@@ -57,6 +59,7 @@ class Program
     async static Task CreateTcpConnection()
     {
         tcpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        tcpSocket.NoDelay = true;
         var serverEndPoint = new IPEndPoint(IPAddress.Parse(serverIp), serverPort);
         
         try
@@ -66,7 +69,7 @@ class Program
             
             //вычисляем AES ключ по общему секрету
             Crypto.ECDH ecdh = new Crypto.ECDH();
-            key = await ecdh.CreateAesKey(tcpSocket, false);
+            key = await ecdh.CreateAesKey(tcpSocket);
         }
         catch (Exception ex)
         { 
@@ -93,6 +96,8 @@ class Program
         while (true)
         {
             var input = WinTun.ReceivePacket();
+            
+            //fix: пофиксить загрузку одного ядра в 100% через WintunGetReadWaitEvent (if (input == null) continue бесконечно по кругу крутиться и забивает весь поток)
             if (input == null) continue;
             
             var data = Crypto.AES.Encrypt(input, key);
