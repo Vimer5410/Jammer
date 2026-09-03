@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Net.NetworkInformation;
+using NETCONLib;
 
 namespace Jammer.Core;
 
@@ -42,24 +43,18 @@ public class Routing
     /// <returns></returns>
     private static (string interfaceName, string gatewayIp) GetActiveNetworkInfo()
     {
-        //fix: убрать нахуй этот спагетти код и переписать все в виде коллекции и добаить проверку не только по имени адаптера но и проверку на WWAN и PPPoE
+        List<string> fakeAdapterList = new List<string>
+        {
+            "jammer", "wintun", "wireguard", "vpn", "proton", "tap-windows", "hyper-v", "virtualbox", "vmware", "virtual"
+        };
+        
         foreach (var networkInterface in NetworkInterface.GetAllNetworkInterfaces())
         {
             string adapter = networkInterface.Name.ToLower();
             
-            // ищем рабочий интерфейс (Ethernet или Wi-Fi) который поднялся и не является виртуальным
             if (networkInterface.OperationalStatus == OperationalStatus.Up && 
                 (networkInterface.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 || networkInterface.NetworkInterfaceType == NetworkInterfaceType.Ethernet) &&
-                !adapter.Contains("jammer") &&
-                !adapter.Contains("wintun") &&
-                !adapter.Contains("wireguard") &&
-                !adapter.Contains("vpn") &&
-                !adapter.Contains("proton") &&
-                !adapter.Contains("tap-windows") &&
-                !adapter.Contains("hyper-v") &&
-                !adapter.Contains("virtualbox") &&
-                !adapter.Contains("vmware") &&
-                !adapter.Contains("virtual"))
+                !fakeAdapterList.Any(el => adapter.Contains(el, StringComparison.OrdinalIgnoreCase)))
                 
             {
                 var props = networkInterface.GetIPProperties();
@@ -138,5 +133,64 @@ public class Routing
         RunNetsh(
             """interface ipv4 set dnsservers name="JammerTun" source=static address=1.1.1.1 register=none""");
         
+    }
+
+    /// <summary>
+    /// автоматическое выполнение ncpa.cpl--Ethernet--свойства--доступ--разрешить другим пользователям сети...
+    /// </summary>
+    public static void ICS(string publicAdapter, string privateAdapter)
+    {
+        NetSharingManagerClass netSharingManager = new NetSharingManagerClass();
+        INetSharingEveryConnectionCollection collection = netSharingManager.EnumEveryConnection;
+
+
+        INetConnection publicConnection = null;
+        INetConnection privateConnection = null;
+        
+        foreach (INetConnection connection in collection)
+        {
+            var props = netSharingManager.get_NetConnectionProps(connection);
+
+            if (props.Name.Equals(publicAdapter, StringComparison.OrdinalIgnoreCase))
+            {
+                publicConnection = connection;
+            }
+
+            if (props.Name.Equals(privateAdapter, StringComparison.OrdinalIgnoreCase))
+            {
+                privateConnection = connection;
+            }
+
+            if (privateConnection != null && publicConnection != null) break;
+            
+        }
+
+        if (privateConnection == null)
+        {
+            throw new NullReferenceException($"[Routing] публичный адаптер {publicAdapter} не найден");
+        }
+
+        if (publicConnection == null)
+        {
+            throw new NullReferenceException($"[Routing] приватный адаптер {privateAdapter} не найден");
+        }
+
+        var cfg = netSharingManager.get_INetSharingConfigurationForINetConnection(privateConnection);
+        
+        try
+        {
+            var publicCfg = netSharingManager.get_INetSharingConfigurationForINetConnection(publicConnection);
+            var privateCfg = netSharingManager.get_INetSharingConfigurationForINetConnection(privateConnection);
+
+            publicCfg.EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC);
+            privateCfg.EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PRIVATE);
+
+            Console.WriteLine($"[Routing] ICS включён: {publicAdapter} → {privateAdapter}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Routing] ошибка включения ICS: {ex.Message}");
+            throw;
+        }
     }
 }

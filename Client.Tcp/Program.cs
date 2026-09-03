@@ -47,8 +47,8 @@ class Program
 
          // await Task.Delay(3000);
         
-         await Routing.Route(serverIp, null, null);
-         await Routing.DNS();
+        await Routing.Route(serverIp, null, null);
+        await Routing.DNS();
         
         //ping 172.16.0.1 -l 1000
         await CreateTcpConnection();
