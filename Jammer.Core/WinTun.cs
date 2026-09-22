@@ -180,8 +180,7 @@ public class WinTun
             {
                 throw new InvalidOperationException("[WinTun] Не удалалось запустить процесс netsh");
             }
-
-            var test = process.Threads;
+            
             process.WaitForExit();
             
             // читаем и выводим полный лог ошибки вместо старого "код ошибки 183....."
@@ -201,7 +200,7 @@ public class WinTun
                 throw new InvalidOperationException($"netsh завершился с ошибкой. Код: {process.ExitCode}");
             }
             
-            Console.WriteLine($"[WinTun] ipAddress успешно задан для виртуального адаптера {test.Count}");
+            Console.WriteLine($"[WinTun] ipAddress успешно задан для виртуального адаптера");
         }
 
     }
