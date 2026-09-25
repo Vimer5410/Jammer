@@ -16,12 +16,23 @@ class Program
     {
         Console.WriteLine("Введите порт для TCP соединения:");
         localPort = Convert.ToInt32(Console.ReadLine() switch{"" or null => "7777", string s => s}) ;
+
+        if (OperatingSystem.IsLinux())
+        {
+            LinuxTun.CreateAndOpenAdapter();
+            LinuxTun.ConfigureIpAddress();
+            LinuxTun.StartSession();
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            _tunAdapter=WinTun.InitializeTunnel();
+            Console.WriteLine($"!!! {_tunAdapter}");
         
-        _tunAdapter=WinTun.InitializeTunnel();
-        Console.WriteLine($"!!! {_tunAdapter}");
+            WinTun.StartSession();
+            await WinTun.ConfigureIpAddress("172.16.0.1", "255.255.255.0");
+        }
         
-        WinTun.StartSession();
-        await WinTun.ConfigureIpAddress("172.16.0.1", "255.255.255.0");
         
         await CreateTcpConnection();
 

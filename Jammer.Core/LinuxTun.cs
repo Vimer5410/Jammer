@@ -6,6 +6,8 @@ namespace Jammer.Core;
 
 public class LinuxTun
 {
+    private static int _fd;
+    
     private const int O_RDWR = 2;
     
     private const short IFF_TUN = 0x0001;
@@ -98,19 +100,19 @@ public class LinuxTun
         ulong count
     );
 
-    public void CreateAndOpenAdapter()
+    public static void CreateAndOpenAdapter()
     {
-        int fd = open("/dev/net/tun", O_RDWR);
+        int _fd = open("/dev/net/tun", O_RDWR);
         var ifreq = new Ifreq("JammerTun", IFF_TUN | IFF_NO_PI, new byte[22]);
         
-        if (fd<0)
+        if (_fd<0)
         {
             throw new IOException(
                 $"[LinuxTun] не получилось создать адаптер, код ошибки {Marshal.GetLastWin32Error()} ");
         }
         else
         {
-            int rc=ioctl(fd, TUNSETIFF, ref ifreq);
+            int rc=ioctl(_fd, TUNSETIFF, ref ifreq);
             if (rc<0)
             {
                 throw new IOException($"[LinuxTun] ошибка ioctl, код ошибки {Marshal.GetLastWin32Error()}");
@@ -118,7 +120,7 @@ public class LinuxTun
         }
     }
 
-    public static async Task ConfigureIpAddress()
+    public static void ConfigureIpAddress()
     {
         ProcessStartInfo processStartInfo = new ProcessStartInfo();
         processStartInfo.FileName = "ip";
@@ -131,7 +133,7 @@ public class LinuxTun
         processStartInfo.RedirectStandardOutput = true;
         processStartInfo.RedirectStandardError = true;
 
-        await Task.Delay(1000);
+        Task.Delay(1000);
 
         using (Process process = Process.Start(processStartInfo))
         {
@@ -152,7 +154,7 @@ public class LinuxTun
         }
     }
 
-    public static async Task StartSession()
+    public static void StartSession()
     {
         ProcessStartInfo processStartInfo = new ProcessStartInfo();
         processStartInfo.FileName = "ip";
@@ -165,7 +167,7 @@ public class LinuxTun
         processStartInfo.RedirectStandardOutput = true;
         processStartInfo.RedirectStandardError = true;
 
-        await Task.Delay(1000);
+        Task.Delay(1000);
         using (Process process = Process.Start(processStartInfo))
         {
             if (process==null)
@@ -184,5 +186,23 @@ public class LinuxTun
             
             Console.WriteLine("[LinuxTun] адаптер JammerTun успешно поднят");
         }
+    }
+    
+    /// <summary>
+    /// Чтение ip пакета из OS
+    /// </summary>
+    public static byte[] ReceivePacket()
+    {
+        byte[] buffer = new byte[2048];
+        int packetRead = read(_fd, buffer, (nuint)buffer.Length);
+        return buffer[..packetRead]; //fix: сделать по нормальному, потому что сейчас создается второй массив, длинной packetRead, аллокация памяти
+    }
+
+    /// <summary>
+    /// Отправка ip пакета в TUN интерфейс
+    /// </summary>
+    public static void SendPacket(byte[] packet)
+    {
+        var packetWrite=write(_fd, packet, (nuint)packet.Length);
     }
 }
