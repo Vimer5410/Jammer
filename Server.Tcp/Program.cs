@@ -11,28 +11,19 @@ class Program
 
     private static byte[] key = new byte[32];
 
-    private static IntPtr _tunAdapter = IntPtr.Zero; 
+    private static ITun _tun;
     static async Task Main(string[] args)
     {
         Console.WriteLine("Введите порт для TCP соединения:");
         localPort = Convert.ToInt32(Console.ReadLine() switch{"" or null => "7777", string s => s}) ;
 
-        if (OperatingSystem.IsLinux())
-        {
-            LinuxTun.CreateAndOpenAdapter();
-            LinuxTun.ConfigureIpAddress();
-            LinuxTun.StartSession();
-        }
-
-        if (OperatingSystem.IsWindows())
-        {
-            _tunAdapter=WinTun.InitializeTunnel();
-            Console.WriteLine($"!!! {_tunAdapter}");
+        _tun = ITun.CreateTun();
         
-            WinTun.StartSession();
-            await WinTun.ConfigureIpAddress("172.16.0.1", "255.255.255.0");
-        }
+        _tun.InitializeTunnel();
         
+        _tun.StartSession();
+        
+        _tun.ConfigureIpAddress("172.16.0.1", 24);
         
         await CreateTcpConnection();
 
@@ -81,7 +72,7 @@ class Program
             byte[] buffer = await Frame.ReadFrameAsync(client);
 
             var data = Crypto.AES.Decrypt(buffer, key);
-            WinTun.SendPacket(data);
+            _tun.SendPacket(data);
             Console.WriteLine($"[Server] получено {data.Length} байт");
         }
     }
@@ -90,7 +81,7 @@ class Program
     {
         while (client.Connected)
         {
-            var input = WinTun.ReceivePacket();
+            var input = _tun.ReceivePacket();
             if (input==null) continue;
             
             var data = Crypto.AES.Encrypt(input, key);

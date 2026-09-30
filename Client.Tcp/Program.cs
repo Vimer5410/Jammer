@@ -15,7 +15,7 @@ class Program
 
     private static byte[] key = new byte[32];
 
-    private static IntPtr _tunAdapter = IntPtr.Zero; 
+    private static ITun _tun;
     async static Task Main(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
@@ -38,14 +38,14 @@ class Program
         Console.WriteLine("Введите ваше имя:");
         userName = Console.ReadLine() switch{"" or null => $"User {rand.Next(1000, 9999)}", string s => s};
         
-        _tunAdapter=WinTun.InitializeTunnel();
-        Console.WriteLine($"!!! {_tunAdapter}");
+        _tun = ITun.CreateTun();
         
-        WinTun.StartSession();
+        _tun.InitializeTunnel();
         
-        await WinTun.ConfigureIpAddress("172.16.0.2", "255.255.255.0");
-
-         // await Task.Delay(3000);
+        _tun.StartSession();
+        
+        _tun.ConfigureIpAddress("172.16.0.2", 24);
+        
         
         await Routing.Route(serverIp, null, null);
         await Routing.DNS();
@@ -85,7 +85,7 @@ class Program
             byte[] buffer = await Frame.ReadFrameAsync(tcpSocket);
             
             var data = Crypto.AES.Decrypt(buffer, key);
-            WinTun.SendPacket(data);
+            _tun.SendPacket(data);
             Console.WriteLine($"Получено {data.Length} байт");
         }
     }
@@ -95,7 +95,7 @@ class Program
         
         while (true)
         {
-            var input = WinTun.ReceivePacket();
+            var input = _tun.ReceivePacket();
             
             //fix: пофиксить загрузку одного ядра в 100% через WintunGetReadWaitEvent (if (input == null) continue бесконечно по кругу крутиться и забивает весь поток)
             if (input == null) continue;

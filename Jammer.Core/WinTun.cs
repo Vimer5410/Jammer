@@ -1,9 +1,10 @@
-﻿using System.Diagnostics;
+﻿using System.Buffers.Binary;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Jammer.Core;
 
-public class WinTun
+public class WinTun : ITun
 {
     [DllImport("wintun.dll")]
     static extern uint WintunGetRunningDriverVersion();
@@ -107,7 +108,7 @@ public class WinTun
     /// инициализация WinTun интерфейса
     /// </summary>
 
-    public static IntPtr InitializeTunnel()
+    public void InitializeTunnel()
     {
         
         IntPtr requestedGUID = Marshal.AllocHGlobal(Marshal.SizeOf(_guid));
@@ -143,8 +144,7 @@ public class WinTun
             {
                 Console.WriteLine("[WinTun] адаптер успешно создан");
             }
-
-            return _tunAdapter;
+            
         }
         catch (Exception ex)
         {
@@ -160,8 +160,25 @@ public class WinTun
     /// <summary>
     /// Привязка метаданных к WinTun интерфейсу
     /// </summary>
-    public static async Task ConfigureIpAddress(string ipAddress, string mask)
+    public void ConfigureIpAddress(string ipAddress, int maskLength)
     {
+        //вычисляем маску подсети по ее префиксу типа /24
+        string mask;
+        if (maskLength==0)
+        {
+            mask="0.0.0.0";
+        }
+        else
+        {
+            uint maskUint=(0xFFFFFFFF<<(32-maskLength));
+            uint b1 = maskUint >> 24;
+            uint b2 = (maskUint >> 16) & 0xFF;
+            uint b3 = (maskUint >> 8) & 0xFF;
+            uint b4 = maskUint & 0xFF;
+            mask = $"{b1}.{b2}.{b3}.{b4}";
+        }
+        
+        
         ProcessStartInfo processStartInfo = new ProcessStartInfo();
         processStartInfo.FileName = "netsh";
         processStartInfo.Arguments = $"interface ipv4 set address name=\"JammerTun\" source=static addr={ipAddress} mask={mask} gateway=none";
@@ -173,7 +190,7 @@ public class WinTun
         processStartInfo.RedirectStandardOutput = true;
         processStartInfo.RedirectStandardError = true;
 
-        await Task.Delay(1000);
+        Task.Delay(1000);
         using (Process process = Process.Start(processStartInfo))
         {
             if (process==null)
@@ -209,7 +226,7 @@ public class WinTun
 /// Запуск сессии чтения/записи пакетов
 /// </summary>
 
-    public static IntPtr StartSession()
+    public void StartSession()
     {
         try
         {
@@ -224,8 +241,7 @@ public class WinTun
             {
                 Console.WriteLine("[WinTun] сессия успешно создана");
             }
-
-            return _session;
+            
         }
         catch (Exception ex)
         {
@@ -238,7 +254,7 @@ public class WinTun
     /// <summary>
     /// Отправка IP-пакета из OS
     /// </summary>
-    public static void SendPacket(byte[] packet)
+    public void SendPacket(byte[] packet)
     {
         if (_session == IntPtr.Zero)
         {
@@ -262,7 +278,7 @@ public class WinTun
     /// Чтение IP-пакета из OS (исходящий трафик из windows в ваш туннель)
     /// </summary>
     
-    public static byte[] ReceivePacket()
+    public byte[] ReceivePacket()
     {
         if (_session == IntPtr.Zero)
         {

@@ -4,9 +4,9 @@ using System.Text;
 
 namespace Jammer.Core;
 
-public class LinuxTun
+public class LinuxTun : ITun
 {
-    private static int _fd;
+    private int _fd;
     
     private const int O_RDWR = 2;
     
@@ -100,7 +100,7 @@ public class LinuxTun
         ulong count
     );
 
-    public static void CreateAndOpenAdapter()
+    public void InitializeTunnel()
     {
         int _fd = open("/dev/net/tun", O_RDWR);
         var ifreq = new Ifreq("JammerTun", IFF_TUN | IFF_NO_PI, new byte[22]);
@@ -120,11 +120,11 @@ public class LinuxTun
         }
     }
 
-    public static void ConfigureIpAddress()
+    public void ConfigureIpAddress(string ipAddress, int maskLength)
     {
         ProcessStartInfo processStartInfo = new ProcessStartInfo();
         processStartInfo.FileName = "ip";
-        processStartInfo.Arguments = "addr add 10.100.0.1/24 dev JammerTun";
+        processStartInfo.Arguments = $"addr add {ipAddress}/{maskLength} dev JammerTun";
         processStartInfo.CreateNoWindow = true;
         processStartInfo.Verb = "runas";
         processStartInfo.UseShellExecute = false;
@@ -154,7 +154,7 @@ public class LinuxTun
         }
     }
 
-    public static void StartSession()
+    public void StartSession()
     {
         ProcessStartInfo processStartInfo = new ProcessStartInfo();
         processStartInfo.FileName = "ip";
@@ -191,7 +191,7 @@ public class LinuxTun
     /// <summary>
     /// Чтение ip пакета из OS
     /// </summary>
-    public static byte[] ReceivePacket()
+    public byte[] ReceivePacket()
     {
         byte[] buffer = new byte[2048];
         int packetRead = read(_fd, buffer, (nuint)buffer.Length);
@@ -201,7 +201,7 @@ public class LinuxTun
     /// <summary>
     /// Отправка ip пакета в TUN интерфейс
     /// </summary>
-    public static void SendPacket(byte[] packet)
+    public void SendPacket(byte[] packet)
     {
         var packetWrite=write(_fd, packet, (nuint)packet.Length);
     }
