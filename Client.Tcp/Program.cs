@@ -16,17 +16,21 @@ class Program
     private static byte[] key = new byte[32];
 
     private static ITun _tun;
+
+    private static IRoute _route;
     async static Task Main(string[] args)
     {
+        _route = IRoute.CreateRoute();
+        
         AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
         { 
-            Routing.Clean(serverIp, "JammerTun");
+            _route.Clean(serverIp, "JammerTun");
         };
 
         Console.CancelKeyPress += (sender, eventArgs) =>
         {
             eventArgs.Cancel = true;
-            Routing.Clean(serverIp,"JammerTun");
+            _route.Clean(serverIp, "JammerTun");
             Environment.Exit(0);
         };
         
@@ -46,9 +50,9 @@ class Program
         
         _tun.ConfigureIpAddress("172.16.0.2", 24);
         
+        _route.Route(serverIp, null, null);
         
-        await Routing.Route(serverIp, null, null);
-        await Routing.DNS();
+        _route.DNS();
         
         //ping 172.16.0.1 -l 1000
         await CreateTcpConnection();

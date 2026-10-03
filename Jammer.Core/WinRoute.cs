@@ -4,7 +4,7 @@ using NETCONLib;
 
 namespace Jammer.Core;
 
-public class Routing
+public class WinRoute : IRoute
 {
 
     /// <summary>
@@ -25,14 +25,14 @@ public class Routing
         {
             if (process==null)
             {
-                throw new InvalidOperationException("[Routing] не удалалось запустить процесс netsh");
+                throw new InvalidOperationException("[WinRoute] не удалалось запустить процесс netsh");
             }
 
             process.WaitForExit();
             
             if (process.ExitCode != 0)
             {
-                Console.WriteLine($"[Routing Warning] Команда 'netsh {command}' завершилась с кодом {process.ExitCode}");
+                Console.WriteLine($"[WinRoute] Команда 'netsh {command}' завершилась с кодом {process.ExitCode}");
             }
         }
     }
@@ -80,7 +80,7 @@ public class Routing
     /// <param name="serverIp"></param>
     /// <param name="localInterface"></param>
     /// <param name="localGatewayIp"></param>
-    public static async Task Route(string serverIp, string? localInterface, string? localGatewayIp)
+    public void Route(string serverIp, string? localInterface, string? localGatewayIp)
     {
         if (localInterface==null || localGatewayIp==null)
         {
@@ -111,16 +111,16 @@ public class Routing
     /// </summary>
     /// <param name="serverIp"></param>
     /// <param name="localInterface"></param>
-    public static void Clean(string serverIp, string localInterface)
+    public void Clean(string serverIp, string localInterface)
     {
         RunNetsh(
             $"""interface ipv4 delete route prefix={serverIp}/32 interface="{localInterface}" """);
 
         RunNetsh(
-            """interface ipv4 delete route prefix=0.0.0.0/1 interface="JammerTun" """);
+            $"""interface ipv4 delete route prefix=0.0.0.0/1 interface="{localInterface}" """);
 
         RunNetsh(
-            """interface ipv4 delete route prefix=128.0.0.0/1 interface="JammerTun" """);
+            $"""interface ipv4 delete route prefix=128.0.0.0/1 interface="{localInterface}" """);
         
     }
 
@@ -128,10 +128,10 @@ public class Routing
     /// <summary>
     /// настройка DNS записей, чтобы избежать DNS leak
     /// </summary>
-    public static async Task DNS()
+    public void DNS()
     {
         RunNetsh(
-            """interface ipv4 set dnsservers name="JammerTun" source=static address=1.1.1.1 register=none""");
+            $"""interface ipv4 set dnsservers name="JammerTun" source=static address=1.1.1.1 register=none""");
         
     }
 
@@ -167,12 +167,12 @@ public class Routing
 
         if (privateConnection == null)
         {
-            throw new NullReferenceException($"[Routing] публичный адаптер {publicAdapter} не найден");
+            throw new NullReferenceException($"[WinRoute] публичный адаптер {publicAdapter} не найден");
         }
 
         if (publicConnection == null)
         {
-            throw new NullReferenceException($"[Routing] приватный адаптер {privateAdapter} не найден");
+            throw new NullReferenceException($"[WinRoute] приватный адаптер {privateAdapter} не найден");
         }
 
         var cfg = netSharingManager.get_INetSharingConfigurationForINetConnection(privateConnection);
@@ -185,11 +185,11 @@ public class Routing
             publicCfg.EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC);
             privateCfg.EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PRIVATE);
 
-            Console.WriteLine($"[Routing] ICS включён: {publicAdapter} → {privateAdapter}");
+            Console.WriteLine($"[WinRoute] ICS включён: {publicAdapter} → {privateAdapter}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Routing] ошибка включения ICS: {ex.Message}");
+            Console.WriteLine($"[WinRoute] ошибка включения ICS: {ex.Message}");
             throw;
         }
     }
