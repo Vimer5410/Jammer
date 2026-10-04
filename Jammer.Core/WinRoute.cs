@@ -92,16 +92,16 @@ public class WinRoute : IRoute
         Console.WriteLine(localInterface);
         
         RunNetsh(
-            """interface ipv4 set address name="JammerTun" static 192.168.137.2 255.255.255.0 192.168.137.1""");
+            """interface ipv4 set address name="JammerTun" static 172.16.0.2 255.255.255.0 172.16.0.1""");
         
         RunNetsh(
             $"""interface ipv4 add route prefix={serverIp}/32 interface="{localInterface}" nexthop={localGatewayIp} store=active""");
         
         RunNetsh(
-            """interface ipv4 add route prefix=0.0.0.0/1 interface="JammerTun" nexthop=192.168.137.1 metric=1 store=active""");
+            """interface ipv4 add route prefix=0.0.0.0/1 interface="JammerTun" nexthop=172.16.0.1 metric=1 store=active""");
 
         RunNetsh(
-            """interface ipv4 add route prefix=128.0.0.0/1 interface="JammerTun" nexthop=192.168.137.1 metric=1 store=active""");
+            """interface ipv4 add route prefix=128.0.0.0/1 interface="JammerTun" nexthop=172.16.0.1 metric=1 store=active""");
         
     }
 

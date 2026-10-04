@@ -102,7 +102,7 @@ public class LinuxTun : ITun
 
     public void InitializeTunnel()
     {
-        int _fd = open("/dev/net/tun", O_RDWR);
+        _fd = open("/dev/net/tun", O_RDWR);
         var ifreq = new Ifreq("JammerTun", IFF_TUN | IFF_NO_PI, new byte[22]);
         
         if (_fd<0)
