@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server.Tcp", "Server.Tcp\Se
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jammer.Daemon", "Jammer.Daemon\Jammer.Daemon.csproj", "{9E9980DD-14B2-42F8-A957-B64C0A0EFF37}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jammer.Logging", "Jammer.Logging\Jammer.Logging.csproj", "{C8BE4405-8998-462B-ACD0-5DBBC334822C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,5 +44,9 @@ Global
 		{9E9980DD-14B2-42F8-A957-B64C0A0EFF37}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E9980DD-14B2-42F8-A957-B64C0A0EFF37}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E9980DD-14B2-42F8-A957-B64C0A0EFF37}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C8BE4405-8998-462B-ACD0-5DBBC334822C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C8BE4405-8998-462B-ACD0-5DBBC334822C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C8BE4405-8998-462B-ACD0-5DBBC334822C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C8BE4405-8998-462B-ACD0-5DBBC334822C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

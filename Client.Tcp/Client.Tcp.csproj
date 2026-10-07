@@ -9,12 +9,18 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Jammer.Core\Jammer.Core.csproj" />
+      <ProjectReference Include="..\Jammer.Logging\Jammer.Logging.csproj" />
     </ItemGroup>
 
     <ItemGroup>
       <None Include="..\wintun.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Serilog" Version="4.4.0" />
+      <PackageReference Include="Serilog.Sinks.Console" Version="6.1.0" />
     </ItemGroup>
 
 </Project>

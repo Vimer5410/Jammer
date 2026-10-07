@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using System.Text;
 using Jammer.Core;
+using Serilog;
 
 class Program
 {
@@ -36,7 +37,7 @@ class Program
         
         var rand = new Random();
         Console.WriteLine("Введите ip сервера:");
-        serverIp = Console.ReadLine() switch { "" or null => "192.168.31.176", string s => s };
+        serverIp = Console.ReadLine() switch { "" or null => "77.221.140.145", string s => s };
         Console.WriteLine("Введите порт для TCP соединения:");
         serverPort = Convert.ToInt32(Console.ReadLine() switch { "" or null => "7777", string s => s });
         Console.WriteLine("Введите ваше имя:");
@@ -90,7 +91,8 @@ class Program
             
             var data = Crypto.AES.Decrypt(buffer, key);
             _tun.SendPacket(data);
-            Console.WriteLine($"Получено {data.Length} байт");
+            
+            Log.Debug($"Получено {data.Length} байт");
         }
     }
 
@@ -107,7 +109,7 @@ class Program
             var data = Crypto.AES.Encrypt(input, key);
             await Frame.WriteFrameAsync(tcpSocket,data);
             
-            Console.WriteLine($"Отправлено {data.Length} байт");
+            Log.Debug($"Отправлено {data.Length} байт");
         }
     }
     

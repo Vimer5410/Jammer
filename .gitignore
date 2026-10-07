@@ -23,10 +23,13 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
+
 # .NET Core
 project.lock.json
 project.fragment.lock.json
 artifacts/
+out/
+publish-linux/
 
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt

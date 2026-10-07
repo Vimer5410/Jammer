@@ -1,6 +1,7 @@
 ﻿using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Serilog;
 
 namespace Jammer.Core;
 
@@ -205,11 +206,11 @@ public class WinTun : ITun
             string output = process.StandardOutput.ReadToEnd();
             if (!string.IsNullOrEmpty(error))
             {
-                Console.WriteLine($"[netsh stdError] {error}");
+                Log.Fatal($"[netsh stdError] {error}");
             }
             if (!string.IsNullOrEmpty(output))
             {
-                Console.WriteLine($"[netsh stdOut] {output}");
+                Log.Fatal($"[netsh stdOut] {output}");
             }
 
             if (process.ExitCode!=0)
@@ -217,7 +218,7 @@ public class WinTun : ITun
                 throw new InvalidOperationException($"netsh завершился с ошибкой. Код: {process.ExitCode}");
             }
             
-            Console.WriteLine($"[WinTun] ipAddress успешно задан для виртуального адаптера");
+            Log.Information($"[WinTun] ipAddress успешно задан для виртуального адаптера");
         }
 
     }
@@ -239,7 +240,7 @@ public class WinTun : ITun
             }
             else
             {
-                Console.WriteLine("[WinTun] сессия успешно создана");
+                Log.Information("[WinTun] сессия успешно создана");
             }
             
         }
@@ -299,7 +300,7 @@ public class WinTun : ITun
         
         if (receivedPacketsBytes!=null)
         {
-            Console.WriteLine($"[WinTun] получено {receivedPacketsBytes.Length} байт");
+            Log.Debug($"[WinTun] получено {receivedPacketsBytes.Length} байт");
         }
 
         return receivedPacketsBytes;

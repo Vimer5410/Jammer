@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using System.Text;
 using Jammer.Core;
+using Serilog;
 
 class Program
 {
@@ -73,7 +74,8 @@ class Program
 
             var data = Crypto.AES.Decrypt(buffer, key);
             _tun.SendPacket(data);
-            Console.WriteLine($"[Server] получено {data.Length} байт");
+            
+            Log.Debug($"[Server] получено {data.Length} байт");
         }
     }
 
