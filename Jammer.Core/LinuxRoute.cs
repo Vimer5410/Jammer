@@ -1,10 +1,12 @@
 ﻿using System.Diagnostics;
 using System.Net.NetworkInformation;
+using Serilog;
 
 namespace Jammer.Core;
 
 public class LinuxRoute : IRoute
 {
+    private static ILogger _linuxRouteLogger = Log.ForContext("SourceContext", "LinuxRoute");
 
     public void RunProcess(string operand, string command)
     {
@@ -26,7 +28,7 @@ public class LinuxRoute : IRoute
 
             if (process.ExitCode!=0)
             {
-                Console.WriteLine($"[LinuxRoute] команда ip {command} завершилась с ошибкой {process.ExitCode}");
+                _linuxRouteLogger.Error("команда ip {Command} завершилась с ошибкой {ExitCode}", command, process.ExitCode);
             }
         }
     }

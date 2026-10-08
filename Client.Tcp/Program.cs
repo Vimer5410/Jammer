@@ -9,8 +9,6 @@ class Program
     public static string serverIp { get; private set; }
     
     public static int serverPort { get; private set; }
-    
-    private static string? userName { get; set; }
 
     private static Socket tcpSocket;
 
@@ -19,8 +17,12 @@ class Program
     private static ITun _tun;
 
     private static IRoute _route;
+
+    private static ILogger _clientTcpLogger = Log.ForContext("SourceContext", "Client-Tcp"); 
+    
     async static Task Main(string[] args)
     {
+        Logging.ConfigureLogger();
         _route = IRoute.CreateRoute();
         
         AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
@@ -35,13 +37,12 @@ class Program
             Environment.Exit(0);
         };
         
-        var rand = new Random();
-        Console.WriteLine("Введите ip сервера:");
+        
+        _clientTcpLogger.Information("Введите ip сервера:");
         serverIp = Console.ReadLine() switch { "" or null => "77.221.140.145", string s => s };
-        Console.WriteLine("Введите порт для TCP соединения:");
+        _clientTcpLogger.Information("Введите порт для TCP соединения:");
         serverPort = Convert.ToInt32(Console.ReadLine() switch { "" or null => "7777", string s => s });
-        Console.WriteLine("Введите ваше имя:");
-        userName = Console.ReadLine() switch{"" or null => $"User {rand.Next(1000, 9999)}", string s => s};
+        
         
         _tun = ITun.CreateTun();
         
@@ -70,7 +71,7 @@ class Program
         try
         {
             await tcpSocket.ConnectAsync(serverEndPoint);
-            Console.WriteLine("==========TCP соедение установлено=======");
+            _clientTcpLogger.Information("==========TCP соедение установлено=======");
             
             //вычисляем AES ключ по общему секрету
             Crypto.ECDH ecdh = new Crypto.ECDH();
@@ -78,7 +79,7 @@ class Program
         }
         catch (Exception ex)
         { 
-            Console.WriteLine($"Ошибка: {ex.Message}");
+            _clientTcpLogger.Error("Ошибка: {Ex}", ex.Message);
             Environment.Exit(1);
         }
     }
@@ -92,7 +93,7 @@ class Program
             var data = Crypto.AES.Decrypt(buffer, key);
             _tun.SendPacket(data);
             
-            Log.Debug($"Получено {data.Length} байт");
+            _clientTcpLogger.Debug("Получено {Bytes} байт", data.Length);
         }
     }
 
@@ -109,7 +110,7 @@ class Program
             var data = Crypto.AES.Encrypt(input, key);
             await Frame.WriteFrameAsync(tcpSocket,data);
             
-            Log.Debug($"Отправлено {data.Length} байт");
+            _clientTcpLogger.Debug("Отправлено {Bytes} байт", data.Length);
         }
     }
     

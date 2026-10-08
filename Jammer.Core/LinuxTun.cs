@@ -1,12 +1,16 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using Serilog;
+using Serilog.Core;
 
 namespace Jammer.Core;
 
 public class LinuxTun : ITun
 {
     private int _fd;
+
+    private static ILogger _linuxTunLogger = Log.ForContext("SourceContext", "LinuxTun");
     
     private const int O_RDWR = 2;
     
@@ -150,7 +154,7 @@ public class LinuxTun : ITun
                 throw new IOException($"[LinuxTun] метод ConfigureIpAddress завершился с ошибкой {error}");
             }
             
-            Console.WriteLine("[LinuxTun] интерфейсу JammerTun присвоен ip адрес");
+            _linuxTunLogger.Information("интерфейсу JammerTun присвоен ip адрес");
         }
     }
 
@@ -184,7 +188,7 @@ public class LinuxTun : ITun
                 throw new IOException($"[LinuxTun] метод StartSession завершился с ошибкой {error}");
             }
             
-            Console.WriteLine("[LinuxTun] адаптер JammerTun успешно поднят");
+            _linuxTunLogger.Information("адаптер JammerTun успешно поднят");
         }
     }
     

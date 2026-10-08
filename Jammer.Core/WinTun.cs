@@ -21,21 +21,22 @@ public class WinTun : ITun
     private const uint _capacity = 0x2000000;      /* 32мб */
 
     private static uint _packetSize = 0xFFFF;
-        
+
+    private static ILogger _tunLogger = Log.ForContext("SourceContext", "WinTun");
     public static void WinTunTest()
     {
         try
         {
             uint version = WintunGetRunningDriverVersion();
-            Console.WriteLine($"Wintun version: {version >> 16}.{version & 0xFFFF}");
+            _tunLogger.Information($"Wintun version: {version >> 16}.{version & 0xFFFF}");
         }
         catch (DllNotFoundException)
         {
-            Console.WriteLine("DLL не найдена(указан не тот путь или разрядность)");
+            _tunLogger.Error("DLL не найдена(указан не тот путь или разрядность)");
         }
         catch (EntryPointNotFoundException)
         {
-            Console.WriteLine("DLL найдена, но функция не та - возможно неверная версия Wintun");
+            _tunLogger.Error("DLL найдена, но функция не та - возможно неверная версия Wintun");
         }
     }
 
@@ -127,7 +128,7 @@ public class WinTun : ITun
 
                 if (errorCode==183)
                 {
-                    Console.WriteLine("[WinTun] адаптер уже существует в системе, переподключаемся...");
+                    _tunLogger.Information("адаптер уже существует в системе, переподключаемся...");
                     _tunAdapter = WintunOpenAdapter("JammerTun");
                 }
                 
@@ -143,13 +144,13 @@ public class WinTun : ITun
             }
             else
             {
-                Console.WriteLine("[WinTun] адаптер успешно создан");
+                _tunLogger.Information("адаптер успешно создан");
             }
             
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[WinTun] {ex}");
+            _tunLogger.Error("{Ex}", ex);
             throw;
         }
         finally
@@ -206,11 +207,11 @@ public class WinTun : ITun
             string output = process.StandardOutput.ReadToEnd();
             if (!string.IsNullOrEmpty(error))
             {
-                Log.Fatal($"[netsh stdError] {error}");
+                _tunLogger.Error("[netsh stdError] {Error}", error);
             }
             if (!string.IsNullOrEmpty(output))
             {
-                Log.Fatal($"[netsh stdOut] {output}");
+                _tunLogger.Error("[netsh stdOut] {Output}", output);
             }
 
             if (process.ExitCode!=0)
@@ -218,7 +219,7 @@ public class WinTun : ITun
                 throw new InvalidOperationException($"netsh завершился с ошибкой. Код: {process.ExitCode}");
             }
             
-            Log.Information($"[WinTun] ipAddress успешно задан для виртуального адаптера");
+            _tunLogger.Information($"ipAddress успешно задан для виртуального адаптера");
         }
 
     }
@@ -236,17 +237,17 @@ public class WinTun : ITun
             if (_session == IntPtr.Zero)
             {
                 var errorCode = Marshal.GetLastWin32Error();
-                throw new InvalidProgramException($"[WinTun] не удалось открыть сессию, код ошибки: {errorCode}");
+                throw new InvalidProgramException($"не удалось открыть сессию, код ошибки: {errorCode}");
             }
             else
             {
-                Log.Information("[WinTun] сессия успешно создана");
+                _tunLogger.Information("сессия успешно создана");
             }
             
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[WinTun] {ex}");
+            _tunLogger.Error("{Ex}", ex);
             throw;
         }
         
@@ -300,7 +301,7 @@ public class WinTun : ITun
         
         if (receivedPacketsBytes!=null)
         {
-            Log.Debug($"[WinTun] получено {receivedPacketsBytes.Length} байт");
+            _tunLogger.Debug("получено {bytes} байт", receivedPacketsBytes.Length);
         }
 
         return receivedPacketsBytes;

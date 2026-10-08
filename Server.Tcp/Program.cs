@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Text;
 using Jammer.Core;
 using Serilog;
+using Serilog.Core;
 
 class Program
 {
@@ -13,9 +14,13 @@ class Program
     private static byte[] key = new byte[32];
 
     private static ITun _tun;
+
+    private static ILogger _serverTcpLogger = Log.ForContext("SourceContext", "Server-Tcp");
     static async Task Main(string[] args)
     {
-        Console.WriteLine("Введите порт для TCP соединения:");
+        Logging.ConfigureLogger();
+        
+        _serverTcpLogger.Information("Введите порт для TCP соединения:");
         localPort = Convert.ToInt32(Console.ReadLine() switch{"" or null => "7777", string s => s}) ;
 
         _tun = ITun.CreateTun();
@@ -31,7 +36,7 @@ class Program
         while (true)
         {
             Socket client = await tcpSocket.AcceptAsync();
-            Console.WriteLine("[Server] клиент принят: " + client.RemoteEndPoint);
+            _serverTcpLogger.Debug("клиент принят: {Client}", client.RemoteEndPoint);
             
             try
             {
@@ -43,7 +48,7 @@ class Program
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[Server] клиент отключился: " + ex.Message);
+                _serverTcpLogger.Debug("клиент отключился: {Ex}",ex.Message);
             }
         }
         
@@ -58,11 +63,11 @@ class Program
         {
             tcpSocket.Bind(serverEndPoint);
             tcpSocket.Listen();
-            Console.WriteLine("==========TCP соедение установлено=======");
+            _serverTcpLogger.Information("==========TCP соедение установлено=======");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Server] ошибка: {ex.Message}");
+            _serverTcpLogger.Error("ошибка: {Ex}", ex.Message);
             Environment.Exit(1);
         }
     }
@@ -75,7 +80,7 @@ class Program
             var data = Crypto.AES.Decrypt(buffer, key);
             _tun.SendPacket(data);
             
-            Log.Debug($"[Server] получено {data.Length} байт");
+            _serverTcpLogger.Debug("получено {Bytes} байт", data.Length);
         }
     }
 

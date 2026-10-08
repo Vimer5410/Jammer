@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
 using NSec.Cryptography;
+using Serilog;
 using PublicKey = NSec.Cryptography.PublicKey;
 
 
@@ -14,6 +15,7 @@ namespace Jammer.Core;
 
 public class Crypto
 {
+    private static ILogger _cryptoLogger = Log.ForContext("SourceContext", "ECDH");
     public static class AES
     {
         private const int nonceSize= 12;
@@ -173,11 +175,12 @@ public class Crypto
                 KeyGeneration();
                 byte[] buffer= GetPublicKeyBytes();
                 await client.SendAsync(buffer);
-                Console.WriteLine("[ECDH] публичный ключ отправлен");
+                
+                _cryptoLogger.Information("публичный ключ отправлен");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ECDH] {ex}");
+                _cryptoLogger.Error("{ex}");
                 throw;
             }
         }
@@ -198,13 +201,13 @@ public class Crypto
             try
             {
                 await client.ReceiveAsync(buffer, SocketFlags.None);
-                Console.WriteLine("[ECDH] публичный ключ получен");
+                _cryptoLogger.Information("публичный ключ получен");
                 return ImportPublicKey(buffer);
 
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ECDH] {ex}");
+                _cryptoLogger.Error("{Ex}", ex);
                 throw;
             }
         }

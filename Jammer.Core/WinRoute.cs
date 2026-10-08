@@ -1,11 +1,14 @@
 ﻿using System.Diagnostics;
 using System.Net.NetworkInformation;
 using NETCONLib;
+using Serilog;
+using Serilog.Core;
 
 namespace Jammer.Core;
 
 public class WinRoute : IRoute
 {
+    private static ILogger _winRouteLogger = Log.ForContext("SourceContext", "WinRoute");
 
     /// <summary>
     /// выполнение netsh скриптов
@@ -32,7 +35,7 @@ public class WinRoute : IRoute
             
             if (process.ExitCode != 0)
             {
-                Console.WriteLine($"[WinRoute] Команда 'netsh {command}' завершилась с кодом {process.ExitCode}");
+                _winRouteLogger.Error("Команда 'netsh {Command}' завершилась с кодом {ExitCode}", command, process.ExitCode);
             }
         }
     }
@@ -88,8 +91,6 @@ public class WinRoute : IRoute
             localInterface = networkInfo.interfaceName;
             localGatewayIp = networkInfo.gatewayIp;
         }
-
-        Console.WriteLine(localInterface);
         
         RunNetsh(
             """interface ipv4 set address name="JammerTun" static 172.16.0.2 255.255.255.0 172.16.0.1""");
@@ -185,11 +186,11 @@ public class WinRoute : IRoute
             publicCfg.EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC);
             privateCfg.EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PRIVATE);
 
-            Console.WriteLine($"[WinRoute] ICS включён: {publicAdapter} → {privateAdapter}");
+            _winRouteLogger.Information("ICS включён: {PublicAdapter} → {PrivateAdapter}", publicAdapter, privateAdapter);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[WinRoute] ошибка включения ICS: {ex.Message}");
+            _winRouteLogger.Error("ошибка включения ICS: {Ex}", ex.Message);
             throw;
         }
     }
