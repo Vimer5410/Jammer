@@ -67,7 +67,7 @@ public class LinuxRoute : IRoute
         
     }
 
-    public void Route(string serverIp, string? localInterface, string? localGatewayIp)
+    public void Route(string serverIp, string clientIp, string? localInterface, string? localGatewayIp)
     {
         if (localInterface==null | localGatewayIp==null)
         {

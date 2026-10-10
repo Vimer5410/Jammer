@@ -18,9 +18,14 @@ public class Frame
 
     public static async Task<byte[]> ReadFrameAsync(Socket client)
     {
-        var firstBytes =await ReadExactlyAsync(client, 4);
-        var allMessageLength = BinaryPrimitives.ReadInt32BigEndian(firstBytes);
+        var first4Bytes =await ReadExactlyAsync(client, 4);
+        var allMessageLength = BinaryPrimitives.ReadInt32BigEndian(first4Bytes);
 
+        if (allMessageLength<=0 || allMessageLength>1528)
+        {
+            throw new OverflowException($"[Frame] получен пакет длиной {allMessageLength}, и этот пакет был отклонен");
+        }
+        
         var data =await ReadExactlyAsync(client, allMessageLength);
         return data;
     }
@@ -32,6 +37,10 @@ public class Frame
         while (total<byteCount)
         {
             int bytesRead = await socket.ReceiveAsync(buffer.AsMemory(total, byteCount-total));
+            if (bytesRead == 0)
+            {
+                throw new IOException($"[Frame] клиент отключился");
+            }
             total += bytesRead;
         }
         

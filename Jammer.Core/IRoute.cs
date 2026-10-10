@@ -2,7 +2,7 @@
 
 public interface IRoute
 {
-    public void Route(string serverIp, string? localInterface, string? localGatewayIp);
+    public void Route(string serverIp, string clientIp, string? localInterface, string? localGatewayIp);
 
     public void Clean(string serverIp, string localInterface);
 

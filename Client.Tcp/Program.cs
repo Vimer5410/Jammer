@@ -18,7 +18,9 @@ class Program
 
     private static IRoute _route;
 
-    private static ILogger _clientTcpLogger = Log.ForContext("SourceContext", "Client-Tcp"); 
+    private static ILogger _clientTcpLogger = Log.ForContext("SourceContext", "Client-Tcp");
+
+    static List<int> clientIds = new List<int>();
     
     async static Task Main(string[] args)
     {
@@ -42,7 +44,8 @@ class Program
         serverIp = Console.ReadLine() switch { "" or null => "77.221.140.145", string s => s };
         _clientTcpLogger.Information("Введите порт для TCP соединения:");
         serverPort = Convert.ToInt32(Console.ReadLine() switch { "" or null => "7777", string s => s });
-        
+
+        string tunnelIp = $"172.16.0.{Generate()}";
         
         _tun = ITun.CreateTun();
         
@@ -50,9 +53,9 @@ class Program
         
         _tun.StartSession();
         
-        _tun.ConfigureIpAddress("172.16.0.2", 24);
+        _tun.ConfigureIpAddress(tunnelIp, 24);
         
-        _route.Route(serverIp, null, null);
+        _route.Route(serverIp, tunnelIp,null, null);
         
         _route.DNS();
         
@@ -60,6 +63,24 @@ class Program
         await CreateTcpConnection();
         await Task.WhenAll(ReceiveMessageAsync(), SendMessageAsync());
         
+    }
+
+    static int Generate()
+    {
+        
+        Random random = new Random();
+        
+        var clientId = random.Next(2, 255);
+        if (clientIds.Contains(clientId))
+        {
+            clientId = Generate();
+        }
+        else
+        {
+            clientIds.Add(clientId);
+        }
+        
+        return clientId;
     }
     
     async static Task CreateTcpConnection()
