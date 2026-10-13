@@ -10,13 +10,14 @@ class Program
     public static int localPort { get; private set; }
 
     private static Socket tcpSocket;
-
-    private static byte[] key = new byte[32];
-
+    
     private static ITun _tun;
 
     private static ILogger _serverTcpLogger = Log.ForContext("SourceContext", "Server-Tcp");
-    static async Task Main(string[] args)
+
+    private static HashSet<int> clientIds = new HashSet<int>();
+
+    async static Task Main(string[] args)
     {
         Logging.ConfigureLogger();
         
@@ -36,22 +37,56 @@ class Program
         while (true)
         {
             Socket client = await tcpSocket.AcceptAsync();
-            _serverTcpLogger.Debug("клиент принят: {Client}", client.RemoteEndPoint);
+            _ = HandleClientAsync(client);
+            _serverTcpLogger.Information("клиент принят: {Client}", client.RemoteEndPoint);
             
-            try
-            {
-                //вычисляем AES ключ по общему секрету
-                Crypto.ECDH ecdh = new Crypto.ECDH();
-                key = await ecdh.CreateAesKey(client);
-                
-                await Task.WhenAll(ReceiveMessageAsync(client), SendMessageAsync(client));
-            }
-            catch (Exception ex)
-            {
-                _serverTcpLogger.Debug("клиент отключился: {Ex}",ex.Message);
-            }
         }
         
+    }
+    
+    async static Task HandleClientAsync(Socket client)
+    {
+        int clientId = 0;
+        try
+        {
+            Crypto.ECDH ecdh = new Crypto.ECDH();
+            byte[] key = new byte[32];
+            key= await ecdh.CreateAesKey(client);
+                
+            clientId = GenerateUniqueClientsIdentifier();
+            byte[] clientIdBytes = BitConverter.GetBytes(clientId);
+            await SendClientIdAsync(client, clientIdBytes, key);
+                
+            await Task.WhenAll(ReceiveMessageAsync(client, key), SendMessageAsync(client, key));
+            
+        }
+        catch (Exception ex)
+        {
+            _serverTcpLogger.Information("клиент отключился: {Ex}",ex.Message);
+        }
+        finally
+        {
+            clientIds.Remove(clientId);
+            _serverTcpLogger.Information("{id} удален", clientId);
+        }
+    }
+    
+    static int GenerateUniqueClientsIdentifier()
+    {
+        
+        Random random = new Random();
+        
+        var clientId = random.Next(2, 255);
+        if (clientIds.Contains(clientId))
+        {
+            clientId = GenerateUniqueClientsIdentifier();
+        }
+        else
+        {
+            clientIds.Add(clientId);
+        }
+        
+        return clientId;
     }
 
     async static Task CreateTcpConnection()
@@ -71,7 +106,7 @@ class Program
             Environment.Exit(1);
         }
     }
-    async static Task ReceiveMessageAsync(Socket client)
+    async static Task ReceiveMessageAsync(Socket client, byte[] key)
     {
         while (client.Connected)
         {
@@ -84,7 +119,7 @@ class Program
         }
     }
 
-    async static Task SendMessageAsync(Socket client)
+    async static Task SendMessageAsync(Socket client, byte[] key)
     {
         while (client.Connected)
         {
@@ -93,6 +128,15 @@ class Program
             
             var data = Crypto.AES.Encrypt(input, key);
             
+            await Frame.WriteFrameAsync(client, data);
+        }
+    }
+    
+    async static Task SendClientIdAsync(Socket client, byte[] input, byte[] key)
+    {
+        if (client.Connected)
+        {
+            var data = Crypto.AES.Encrypt(input, key);
             await Frame.WriteFrameAsync(client, data);
         }
     }

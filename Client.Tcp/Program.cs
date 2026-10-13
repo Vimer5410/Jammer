@@ -19,8 +19,6 @@ class Program
     private static IRoute _route;
 
     private static ILogger _clientTcpLogger = Log.ForContext("SourceContext", "Client-Tcp");
-
-    static List<int> clientIds = new List<int>();
     
     async static Task Main(string[] args)
     {
@@ -45,7 +43,10 @@ class Program
         _clientTcpLogger.Information("Введите порт для TCP соединения:");
         serverPort = Convert.ToInt32(Console.ReadLine() switch { "" or null => "7777", string s => s });
 
-        string tunnelIp = $"172.16.0.{Generate()}";
+        await CreateTcpConnection();
+        int clientId = ReceiveClientIdAsync().Result;
+        
+        string tunnelIp = $"172.16.0.{clientId}";
         
         _tun = ITun.CreateTun();
         
@@ -60,28 +61,10 @@ class Program
         _route.DNS();
         
         //ping 172.16.0.1 -l 1000
-        await CreateTcpConnection();
         await Task.WhenAll(ReceiveMessageAsync(), SendMessageAsync());
         
     }
-
-    static int Generate()
-    {
-        
-        Random random = new Random();
-        
-        var clientId = random.Next(2, 255);
-        if (clientIds.Contains(clientId))
-        {
-            clientId = Generate();
-        }
-        else
-        {
-            clientIds.Add(clientId);
-        }
-        
-        return clientId;
-    }
+    
     
     async static Task CreateTcpConnection()
     {
@@ -115,6 +98,20 @@ class Program
             _tun.SendPacket(data);
             
             _clientTcpLogger.Debug("Получено {Bytes} байт", data.Length);
+        }
+    }
+    
+    async static Task<int> ReceiveClientIdAsync()
+    {
+        while (true)
+        {
+            byte[] buffer = await Frame.ReadFrameAsync(tcpSocket);
+            
+            var data = Crypto.AES.Decrypt(buffer, key);
+            
+            _clientTcpLogger.Information("Получен идентификатор клиента: {id}", BitConverter.ToInt32(data));
+            
+            return BitConverter.ToInt32(data);
         }
     }
 
