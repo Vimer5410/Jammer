@@ -17,6 +17,7 @@ class Program
 
     private static HashSet<int> clientIds = new HashSet<int>();
 
+    private static TunDispatcher _tunDispatcher;
     async static Task Main(string[] args)
     {
         Logging.ConfigureLogger();
@@ -31,6 +32,10 @@ class Program
         _tun.StartSession();
         
         _tun.ConfigureIpAddress("172.16.0.1", 24);
+        
+        _tunDispatcher = new TunDispatcher(_tun);
+        
+        _tunDispatcher.Start();
         
         await CreateTcpConnection();
 
@@ -57,7 +62,9 @@ class Program
             byte[] clientIdBytes = BitConverter.GetBytes(clientId);
             await SendClientIdAsync(client, clientIdBytes, key);
                 
-            await Task.WhenAll(ReceiveMessageAsync(client, key), SendMessageAsync(client, key));
+            _tunDispatcher.Add(clientId, new ClientSession{Key = key, Socket = client});
+            
+            await Task.WhenAll(ReceiveMessageAsync(client, key));
             
         }
         catch (Exception ex)
@@ -66,6 +73,7 @@ class Program
         }
         finally
         {
+            _tunDispatcher.Remove(clientId);
             clientIds.Remove(clientId);
             _serverTcpLogger.Information("{id} удален", clientId);
         }
