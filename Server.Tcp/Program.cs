@@ -52,6 +52,7 @@ class Program
     async static Task HandleClientAsync(Socket client)
     {
         int clientId = 0;
+        ClientSession clientSession = null;
         try
         {
             Crypto.ECDH ecdh = new Crypto.ECDH();
@@ -61,10 +62,11 @@ class Program
             clientId = GenerateUniqueClientsIdentifier();
             byte[] clientIdBytes = BitConverter.GetBytes(clientId);
             await SendClientIdAsync(client, clientIdBytes, key);
-                
-            _tunDispatcher.Add(clientId, new ClientSession{Key = key, Socket = client});
+
+            clientSession = new ClientSession {Key = key, Socket = client};
+            _tunDispatcher.Add(clientId, clientSession);
             
-            await Task.WhenAll(ReceiveMessageAsync(client, key));
+            await Task.WhenAny(ReceiveMessageAsync(client, key), SendMessageAsync(clientSession));
             
         }
         catch (Exception ex)
@@ -75,6 +77,8 @@ class Program
         {
             _tunDispatcher.Remove(clientId);
             clientIds.Remove(clientId);
+            client.Close();
+            clientSession?.Queue.Writer.Complete();
             _serverTcpLogger.Information("{id} удален", clientId);
         }
     }
@@ -126,18 +130,21 @@ class Program
             _serverTcpLogger.Debug("получено {Bytes} байт", data.Length);
         }
     }
+    
 
-    async static Task SendMessageAsync(Socket client, byte[] key)
+    async static Task SendMessageAsync(ClientSession clientSession)
     {
-        while (client.Connected)
+        var client = clientSession.Socket;
+        var key = clientSession.Key;
+        var queue= clientSession.Queue;
+        
+        
+        await foreach (var el in queue.Reader.ReadAllAsync())
         {
-            var input = _tun.ReceivePacket();
-            if (input==null) continue;
-            
-            var data = Crypto.AES.Encrypt(input, key);
-            
+            byte[] data = Crypto.AES.Encrypt(el, key);
             await Frame.WriteFrameAsync(client, data);
         }
+        
     }
     
     async static Task SendClientIdAsync(Socket client, byte[] input, byte[] key)

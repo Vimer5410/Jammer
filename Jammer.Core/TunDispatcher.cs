@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Net.Sockets;
 using Serilog;
+using System.Threading.Channels;
 
 namespace Jammer.Core;
 
@@ -8,6 +9,7 @@ public class ClientSession
 {
     public Socket Socket;
     public byte[] Key;
+    public Channel<byte[]> Queue = Channel.CreateBounded<byte[]>(1000);
 }
 
 //читаем пакет смотрим кому он и отправляем этому клиенту
@@ -16,7 +18,6 @@ public class TunDispatcher
     private static ILogger _logger = Log.ForContext("SourceContext", "TunDispatcher");
 
     private readonly ITun _tun;
-
     
     private readonly ConcurrentDictionary<int, ClientSession> _clients = new();
 
@@ -56,8 +57,7 @@ public class TunDispatcher
 
                 if (!_clients.TryGetValue(clientId, out var client)) continue; 
 
-                byte[] data = Crypto.AES.Encrypt(packet, client.Key);
-                Frame.WriteFrameAsync(client.Socket, data).Wait();
+                client.Queue.Writer.TryWrite(packet);
             }
             catch (Exception ex)
             {
