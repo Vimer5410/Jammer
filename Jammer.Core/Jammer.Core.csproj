@@ -13,8 +13,4 @@
       <PackageReference Include="Serilog.Sinks.Console" Version="6.1.0" />
     </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\Jammer.Logging\Jammer.Logging.csproj" />
-    </ItemGroup>
-
 </Project>

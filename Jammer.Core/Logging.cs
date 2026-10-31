@@ -1,6 +1,8 @@
 ﻿using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 
+namespace Jammer.Core;
+
 public static class Logging
 {
     public static void ConfigureLogger()

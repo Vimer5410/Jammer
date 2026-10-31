@@ -30,6 +30,7 @@ project.fragment.lock.json
 artifacts/
 out/
 publish-linux/
+publish-win/
 
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt

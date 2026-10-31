@@ -9,7 +9,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Jammer.Core\Jammer.Core.csproj" />
-      <ProjectReference Include="..\Jammer.Logging\Jammer.Logging.csproj" />
+      <ProjectReference Include="..\Jammer.Deploy\Jammer.Deploy.csproj" />
     </ItemGroup>
 
     <ItemGroup>

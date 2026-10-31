@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using System.Text;
 using Jammer.Core;
+using Jammer.Deploy;
 using Serilog;
 
 class Program
@@ -36,7 +37,6 @@ class Program
             _route.Clean(serverIp, "JammerTun");
             Environment.Exit(0);
         };
-        
         
         _clientTcpLogger.Information("Введите ip сервера:");
         serverIp = Console.ReadLine() switch { "" or null => "77.221.140.145", string s => s };
