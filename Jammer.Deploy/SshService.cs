@@ -67,4 +67,39 @@ public class SshService
             _sshServiceLogger.Information("Сервер успешно развернут");
         }
     }
+
+
+    private static async Task DeployUsingSftp(string ip, int port, string name, string password)
+    {
+        string url = "https://github.com/Vimer5410/Jammer/releases/download/v0.1.0/jammer-linux-server-x64";
+        string localPath = Path.Combine(Path.GetTempPath(), "jammer-linux-server-x64");
+        
+        using var sftp = new SftpClient(ip, port, name, password);
+        using var ssh = new SshClient(ip, port, name, password);
+        sftp.Connect();
+        ssh.Connect();
+
+        using var createDirCmd = ssh.RunCommand("mkdir -p /opt/jammer");
+        
+        using var http = new HttpClient();
+        
+        await using var source = await http.GetStreamAsync(url);
+        await using var file = File.Create(localPath);
+        
+        await source.CopyToAsync(file);
+        file.Close();
+        await using var fs = File.OpenRead(localPath);
+
+        await sftp.UploadFileAsync(fs, "/opt/jammer/jammer.new");
+        sftp.ChangePermissions("/opt/jammer/jammer.new", 755);
+
+        using var mvCmd = ssh.RunCommand("mv /opt/jammer/jammer.new /opt/jammer/jammer");
+
+        if (mvCmd.ExitStatus==0)
+        {
+            _sshServiceLogger.Information("сервер успешно развернут через sftp");
+        }
+
+        
+    }
 }
