@@ -39,6 +39,14 @@ public class WinTun : ITun
             _tunLogger.Error("DLL найдена, но функция не та - возможно неверная версия Wintun");
         }
     }
+    
+    public static void Close()
+    {
+        WintunEndSession(_session);
+        WintunCloseAdapter(_tunAdapter);
+        _tunAdapter = IntPtr.Zero;
+        _session = IntPtr.Zero;
+    }
 
     // работа с адаптером
     [DllImport("wintun.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -180,48 +188,13 @@ public class WinTun : ITun
             mask = $"{b1}.{b2}.{b3}.{b4}";
         }
         
+
+        RunNetsh($"interface ipv4 set address name=\"JammerTun\" source=static addr={ipAddress} mask={mask} gateway=none");
         
-        ProcessStartInfo processStartInfo = new ProcessStartInfo();
-        processStartInfo.FileName = "netsh";
-        processStartInfo.Arguments = $"interface ipv4 set address name=\"JammerTun\" source=static addr={ipAddress} mask={mask} gateway=none";
-        processStartInfo.CreateNoWindow = true;
-        processStartInfo.Verb = "runas";
-        processStartInfo.UseShellExecute = false;
-    
-        //добавляем логирование ошибок
-        processStartInfo.RedirectStandardOutput = true;
-        processStartInfo.RedirectStandardError = true;
+        RunNetsh("interface ipv4 set subinterface \"JammerTun\" mtu=1500 store=active");
 
-        Task.Delay(1000);
-        using (Process process = Process.Start(processStartInfo))
-        {
-            if (process==null)
-            {
-                throw new InvalidOperationException("[WinTun] Не удалалось запустить процесс netsh");
-            }
-            
-            process.WaitForExit();
-            
-            // читаем и выводим полный лог ошибки вместо старого "код ошибки 183....."
-            string error = process.StandardError.ReadToEnd();
-            string output = process.StandardOutput.ReadToEnd();
-            if (!string.IsNullOrEmpty(error))
-            {
-                _tunLogger.Error("[netsh stdError] {Error}", error);
-            }
-            if (!string.IsNullOrEmpty(output))
-            {
-                _tunLogger.Error("[netsh stdOut] {Output}", output);
-            }
-
-            if (process.ExitCode!=0)
-            {
-                throw new InvalidOperationException($"netsh завершился с ошибкой. Код: {process.ExitCode}");
-            }
-            
-            _tunLogger.Information($"ipAddress успешно задан для виртуального адаптера");
-        }
-
+        _tunLogger.Information($"ipAddress успешно задан для виртуального адаптера");
+        
     }
 
 /// <summary>
@@ -305,5 +278,46 @@ public class WinTun : ITun
         }
 
         return receivedPacketsBytes;
+    }
+
+    private static void RunNetsh(string command)
+    {
+        ProcessStartInfo processStartInfo = new ProcessStartInfo();
+        processStartInfo.FileName = "netsh";
+        processStartInfo.Arguments = command;
+        processStartInfo.CreateNoWindow = true;
+        processStartInfo.Verb = "runas";
+        processStartInfo.UseShellExecute = false;
+    
+        //добавляем логирование ошибок
+        processStartInfo.RedirectStandardOutput = true;
+        processStartInfo.RedirectStandardError = true;
+
+
+        using (Process process = Process.Start(processStartInfo))
+        {
+            if (process == null)
+            {
+                throw new InvalidOperationException("[WinTun] Не удалалось запустить процесс netsh");
+            }
+
+            process.WaitForExit();
+            
+            string error = process.StandardError.ReadToEnd();
+            string output = process.StandardOutput.ReadToEnd();
+            if (!string.IsNullOrEmpty(error))
+            {
+                _tunLogger.Error("[netsh stdError] {Error}", error);
+            }
+            if (!string.IsNullOrEmpty(output))
+            {
+                _tunLogger.Error("[netsh stdOut] {Output}", output);
+            }
+
+            if (process.ExitCode!=0)
+            {
+                throw new InvalidOperationException($"netsh завершился с ошибкой. Код: {process.ExitCode}");
+            }
+        }
     }
 }

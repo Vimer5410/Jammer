@@ -123,6 +123,9 @@ public class WinRoute : IRoute
         RunNetsh(
             $"""interface ipv4 delete route prefix=128.0.0.0/1 interface="{localInterface}" """);
         
+        RunNetsh(
+            $"""interface ipv4 delete route prefix=0.0.0.0/0 interface="{localInterface}" """);
+        
     }
 
     
