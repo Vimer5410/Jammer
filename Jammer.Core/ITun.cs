@@ -7,6 +7,7 @@ public interface ITun
     public void InitializeTunnel();
     public void ConfigureIpAddress(string ipAddress, int maskLength);
     public void StartSession();
+    public void CloseSession();
     public void SendPacket(byte[] packet);
     public byte[] ReceivePacket();
     

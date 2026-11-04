@@ -8,7 +8,7 @@ namespace Jammer.Core;
 
 public class LinuxTun : ITun
 {
-    private int _fd;
+    private int _fd = -1;
 
     private static ILogger _linuxTunLogger = Log.ForContext("SourceContext", "LinuxTun");
     
@@ -189,6 +189,15 @@ public class LinuxTun : ITun
             }
             
             _linuxTunLogger.Information("адаптер JammerTun успешно поднят");
+        }
+    }
+
+    public void CloseSession()
+    {
+        if (_fd>=0)
+        {
+            close(_fd);
+            _fd = -1;
         }
     }
     

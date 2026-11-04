@@ -40,14 +40,7 @@ public class WinTun : ITun
         }
     }
     
-    public static void Close()
-    {
-        WintunEndSession(_session);
-        WintunCloseAdapter(_tunAdapter);
-        _tunAdapter = IntPtr.Zero;
-        _session = IntPtr.Zero;
-    }
-
+    
     // работа с адаптером
     [DllImport("wintun.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr WintunCreateAdapter
@@ -278,6 +271,19 @@ public class WinTun : ITun
         }
 
         return receivedPacketsBytes;
+    }
+    
+    
+    public void CloseSession()
+    {
+        if (_session != IntPtr.Zero && _tunAdapter != IntPtr.Zero)
+        {
+            WintunEndSession(_session);
+            WintunCloseAdapter(_tunAdapter);
+        }
+        
+        _tunAdapter = IntPtr.Zero;
+        _session = IntPtr.Zero;
     }
 
     private static void RunNetsh(string command)
