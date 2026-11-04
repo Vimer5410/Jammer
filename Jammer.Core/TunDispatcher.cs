@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using Serilog;
 using System.Threading.Channels;
+using Jammer.Core.Tun;
 
 namespace Jammer.Core;
 

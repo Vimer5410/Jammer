@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Serilog;
 
-namespace Jammer.Core;
+namespace Jammer.Core.Tun;
 
 public class WinTun : ITun
 {
@@ -110,7 +110,6 @@ public class WinTun : ITun
     /// <summary>
     /// инициализация WinTun интерфейса
     /// </summary>
-
     public void InitializeTunnel()
     {
         
@@ -161,7 +160,7 @@ public class WinTun : ITun
     }
 
     /// <summary>
-    /// Привязка метаданных к WinTun интерфейсу
+    /// Выдача WinTun интерфейсу собственного ip адреса
     /// </summary>
     public void ConfigureIpAddress(string ipAddress, int maskLength)
     {
@@ -189,11 +188,11 @@ public class WinTun : ITun
         _tunLogger.Information($"ipAddress успешно задан для виртуального адаптера");
         
     }
+    
 
-/// <summary>
-/// Запуск сессии чтения/записи пакетов
-/// </summary>
-
+    /// <summary>
+    /// Запуск сессии чтения/записи пакетов
+    /// </summary>
     public void StartSession()
     {
         try
@@ -219,8 +218,25 @@ public class WinTun : ITun
         
     }
 
+    
     /// <summary>
-    /// Отправка IP-пакета из OS
+    /// Закрытие сессии чтения/записи пакетов
+    /// </summary>
+    public void CloseSession()
+    {
+        if (_session != IntPtr.Zero && _tunAdapter != IntPtr.Zero)
+        {
+            WintunEndSession(_session);
+            WintunCloseAdapter(_tunAdapter);
+        }
+        
+        _tunAdapter = IntPtr.Zero;
+        _session = IntPtr.Zero;
+    }
+    
+    
+    /// <summary>
+    /// Отправка ip пакета в TUN интерфейс
     /// </summary>
     public void SendPacket(byte[] packet)
     {
@@ -242,10 +258,10 @@ public class WinTun : ITun
         WintunSendPacket(_session, buffer);
     }
 
-    /// <summary>
-    /// Чтение IP-пакета из OS (исходящий трафик из windows в ваш туннель)
-    /// </summary>
     
+    /// <summary>
+    /// Чтение ip пакета из Tun интерфейса (исходящий трафик из windows в ваш туннель)
+    /// </summary>
     public byte[] ReceivePacket()
     {
         if (_session == IntPtr.Zero)
@@ -273,18 +289,6 @@ public class WinTun : ITun
         return receivedPacketsBytes;
     }
     
-    
-    public void CloseSession()
-    {
-        if (_session != IntPtr.Zero && _tunAdapter != IntPtr.Zero)
-        {
-            WintunEndSession(_session);
-            WintunCloseAdapter(_tunAdapter);
-        }
-        
-        _tunAdapter = IntPtr.Zero;
-        _session = IntPtr.Zero;
-    }
 
     private static void RunNetsh(string command)
     {

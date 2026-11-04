@@ -4,6 +4,7 @@ using System.Text;
 using Jammer.Core;
 using Serilog;
 using Serilog.Core;
+using Jammer.Core.Tun;
 
 class Program
 {

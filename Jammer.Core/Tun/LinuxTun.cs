@@ -4,7 +4,7 @@ using System.Text;
 using Serilog;
 using Serilog.Core;
 
-namespace Jammer.Core;
+namespace Jammer.Core.Tun;
 
 public class LinuxTun : ITun
 {
@@ -104,6 +104,10 @@ public class LinuxTun : ITun
         ulong count
     );
 
+    
+    /// <summary>
+    /// Инициализация LinuxTun интерфейса
+    /// </summary>
     public void InitializeTunnel()
     {
         _fd = open("/dev/net/tun", O_RDWR);
@@ -124,6 +128,9 @@ public class LinuxTun : ITun
         }
     }
 
+    /// <summary>
+    /// Выдача LinuxTun интерфейсу собственного ip адреса
+    /// </summary>
     public void ConfigureIpAddress(string ipAddress, int maskLength)
     {
         ProcessStartInfo processStartInfo = new ProcessStartInfo();
@@ -158,6 +165,10 @@ public class LinuxTun : ITun
         }
     }
 
+    
+    /// <summary>
+    /// Запуск сессии чтения/записи пакетов
+    /// </summary>
     public void StartSession()
     {
         ProcessStartInfo processStartInfo = new ProcessStartInfo();
@@ -192,6 +203,10 @@ public class LinuxTun : ITun
         }
     }
 
+    
+    /// <summary>
+    /// Закрытие сессии чтения/записи пакетов
+    /// </summary>
     public void CloseSession()
     {
         if (_fd>=0)
@@ -201,16 +216,8 @@ public class LinuxTun : ITun
         }
     }
     
-    /// <summary>
-    /// Чтение ip пакета из OS
-    /// </summary>
-    public byte[] ReceivePacket()
-    {
-        byte[] buffer = new byte[2048];
-        int packetRead = read(_fd, buffer, (nuint)buffer.Length);
-        return buffer[..packetRead]; //fix: сделать по нормальному, потому что сейчас создается второй массив, длинной packetRead, аллокация памяти
-    }
-
+    
+    
     /// <summary>
     /// Отправка ip пакета в TUN интерфейс
     /// </summary>
@@ -218,4 +225,15 @@ public class LinuxTun : ITun
     {
         var packetWrite=write(_fd, packet, (nuint)packet.Length);
     }
+    
+    /// <summary>
+    /// Чтение ip пакета из Tun интерфейса
+    /// </summary>
+    public byte[] ReceivePacket()
+    {
+        byte[] buffer = new byte[2048];
+        int packetRead = read(_fd, buffer, (nuint)buffer.Length);
+        return buffer[..packetRead]; //fix: сделать по нормальному, потому что сейчас создается второй массив, длинной packetRead, аллокация памяти
+    }
+    
 }

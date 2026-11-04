@@ -2,7 +2,8 @@
 using System.Net.Sockets;
 using System.Text;
 using Jammer.Core;
-using Jammer.Deploy;
+using Jammer.Core.Routing;
+using Jammer.Core.Tun;
 using Serilog;
 
 class Program

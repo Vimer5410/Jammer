@@ -4,17 +4,15 @@ using NETCONLib;
 using Serilog;
 using Serilog.Core;
 
-namespace Jammer.Core;
+namespace Jammer.Core.Routing;
 
 public class WinRoute : IRoute
 {
     private static ILogger _winRouteLogger = Log.ForContext("SourceContext", "WinRoute");
 
     /// <summary>
-    /// выполнение netsh скриптов
+    /// запуск netsh и выполнение переданной команды, ждет завершения команды
     /// </summary>
-    /// <param name="command"></param>
-    /// <exception cref="InvalidOperationException"></exception>
     private static void RunNetsh(string command)
     {
         ProcessStartInfo processStartInfo = new ProcessStartInfo();
@@ -43,12 +41,13 @@ public class WinRoute : IRoute
     /// <summary>
     /// получение текущего имени интерфейса и ip маршрутизатора
     /// </summary>
-    /// <returns></returns>
     private static (string interfaceName, string gatewayIp) GetActiveNetworkInfo()
     {
         List<string> fakeAdapterList = new List<string>
         {
-            "jammer", "wintun", "wireguard", "vpn", "proton", "tap-windows", "hyper-v", "virtualbox", "vmware", "virtual"
+            "jammer", "wintun", "wireguard", "vpn", "proton", "tap-windows",
+            "hyper-v", "virtualbox", "vmware", "virtual",
+            "docker", "br-", "veth", "virbr", "tun", "tap", "wg", "amn"
         };
         
         foreach (var networkInterface in NetworkInterface.GetAllNetworkInterfaces())
@@ -78,11 +77,9 @@ public class WinRoute : IRoute
     
     
     /// <summary>
-    /// роутинг всего трафика через TUN с исключением сервера
+    /// создание правил маршрутизации для всего трафика через Tun интерфейс
+    /// если интерфейс или шлюз не найдены, берет текущие активные
     /// </summary>
-    /// <param name="serverIp"></param>
-    /// <param name="localInterface"></param>
-    /// <param name="localGatewayIp"></param>
     public void Route(string serverIp, string clientIp, string? localInterface, string? localGatewayIp)
     {
         if (localInterface==null || localGatewayIp==null)
@@ -110,8 +107,6 @@ public class WinRoute : IRoute
     /// <summary>
     /// Очистка/удаление маршрутов
     /// </summary>
-    /// <param name="serverIp"></param>
-    /// <param name="localInterface"></param>
     public void Clean(string serverIp, string localInterface)
     {
         RunNetsh(

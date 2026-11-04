@@ -2,12 +2,15 @@
 using System.Net.NetworkInformation;
 using Serilog;
 
-namespace Jammer.Core;
+namespace Jammer.Core.Routing;
 
 public class LinuxRoute : IRoute
 {
     private static ILogger _linuxRouteLogger = Log.ForContext("SourceContext", "LinuxRoute");
 
+    /// <summary>
+    /// выполнение linux команды, без привязки к операнду, аналог RunNetsh() в WinTun
+    /// </summary>
     public void RunProcess(string operand, string command)
     {
         ProcessStartInfo processStartInfo = new ProcessStartInfo();
@@ -33,6 +36,10 @@ public class LinuxRoute : IRoute
         }
     }
     
+    
+    /// <summary>
+    /// получение текущего имени интерфейса и ip маршрутизатора
+    /// </summary>
     private static (string interfaceName, string gatewayIp) GetActiveNetworkInfo()
     {
         List<string> fakeAdapterList = new List<string>
@@ -66,7 +73,12 @@ public class LinuxRoute : IRoute
         throw new InvalidOperationException("[LinuxRoute] не найден активный интерфейс со шлюзом по умолчанию");
         
     }
-
+    
+    
+    /// <summary>
+    /// создание правил маршрутизации для всего трафика через Tun интерфейс
+    /// если интерфейс или шлюз не найдены, берет текущие активные
+    /// </summary>
     public void Route(string serverIp, string clientIp, string? localInterface, string? localGatewayIp)
     {
         if (localInterface==null | localGatewayIp==null)
@@ -84,6 +96,10 @@ public class LinuxRoute : IRoute
         RunProcess("ip","route add 128.0.0.0/1 via 172.16.0.1 dev JammerTun");
     }
 
+    
+    /// <summary>
+    /// Очистка/удаление маршрутов
+    /// </summary>
     public void Clean(string serverIp, string localInterface)
     {
         RunProcess("ip",$"route del {serverIp}/32");
@@ -93,6 +109,10 @@ public class LinuxRoute : IRoute
         RunProcess("ip","route del 128.0.0.0/1");
     }
 
+    
+    /// <summary>
+    /// настройка DNS записей, чтобы избежать DNS leak
+    /// </summary>
     public void DNS()
     {
         RunProcess("resolvectl",$"dns JammerTun 1.1.1.1");
