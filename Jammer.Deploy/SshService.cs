@@ -21,20 +21,62 @@ public class SshService
         }
     }
 
+    private static void CreateFirewallScript(SshClient ssh)
+    {
+       
+        using var cmd = ssh.RunCommand(
+            """
+            cat > /opt/jammer/firewall.sh <<'EOF'
+            #!/bin/sh
+            set -e
+
+            WAN=$(ip route get 1.1.1.1 2>/dev/null | awk '{ for (i = 1; i < NF; i++) if ($i == "dev") { print $(i + 1); exit } }')
+
+            if [ -z "$WAN" ]; then
+                echo "jammer-firewall: не найден внешний интерфейс (нет маршрута в интернет)" >&2
+                exit 1
+            fi
+
+            sysctl -q -w net.ipv4.ip_forward=1
+
+            iptables -w -t nat -C POSTROUTING -s 172.16.0.0/24 -o "$WAN" -j MASQUERADE 2>/dev/null \
+                || iptables -w -t nat -A POSTROUTING -s 172.16.0.0/24 -o "$WAN" -j MASQUERADE
+
+            
+            iptables -w -C FORWARD -i JammerTun -o "$WAN" -j ACCEPT 2>/dev/null \
+                || iptables -w -I FORWARD -i JammerTun -o "$WAN" -j ACCEPT
+
+            iptables -w -C FORWARD -i "$WAN" -o JammerTun -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT 2>/dev/null \
+                || iptables -w -I FORWARD -i "$WAN" -o JammerTun -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+
+            echo "jammer-firewall: NAT и пересылка настроены через $WAN"
+            EOF
+            chmod +x /opt/jammer/firewall.sh
+            """.ReplaceLineEndings("\n"));
+
+        if (cmd.ExitStatus!=0)
+        {
+            throw new DeployException($"не удалось создать скрипт firewall.sh {cmd.ExitStatus}: {cmd.Error}");
+        }
+    }
+
     private static void UpJammerService(SshClient sshClient)
     {
         _sshServiceLogger.Information("попытка поднятия служб Jammer Service....");
+        
+        CreateFirewallScript(sshClient);
 
         using var systemdCmd = sshClient.RunCommand("systemctl stop jammer; " +
                                              """
                                              cat > /etc/systemd/system/jammer.service <<'EOF'
                                              [Unit]
                                              Description=Jammer VPN server
-                                             After=network.target
+                                             After=online.target
                                              
                                              [Service]
                                              ExecStart=/opt/jammer/jammer
                                              Environment=DOTNET_BUNDLE_EXTRACT_BASE_DIR=/opt/jammer/.net
+                                             ExecStartPre=/opt/jammer/firewall.sh
                                              Restart=on-failure
                                              RestartSec=3
                                              
