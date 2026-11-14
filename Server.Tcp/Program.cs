@@ -43,8 +43,9 @@ class Program
         while (true)
         {
             Socket client = await tcpSocket.AcceptAsync();
-            _ = HandleClientAsync(client);
+            client.NoDelay = true;
             _serverTcpLogger.Information("клиент принят: {Client}", client.RemoteEndPoint);
+            _ = HandleClientAsync(client);
             
         }
         
@@ -95,7 +96,7 @@ class Program
             clientId = GenerateUniqueClientsIdentifier();
         }
         else
-        {
+        {   
             clientIds.Add(clientId);
         }
         
@@ -105,6 +106,7 @@ class Program
     async static Task CreateTcpConnection()
     {
         tcpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        tcpSocket.NoDelay = true;
         var serverEndPoint = new IPEndPoint(IPAddress.Any, localPort);
         
         try
