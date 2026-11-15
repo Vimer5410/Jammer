@@ -105,6 +105,21 @@ public class WinTun : ITun
         IntPtr session,
         uint packetSize
     );
+    
+
+    [DllImport("wintun.dll")]
+    public static extern IntPtr WintunGetReadWaitEvent
+    (
+        IntPtr session
+    );
+    
+    
+    [DllImport("kernel32.dll")]
+    private static extern uint WaitForSingleObject
+    (
+        IntPtr handle,
+        uint milliseconds
+    );
 
 
     /// <summary>
@@ -256,6 +271,13 @@ public class WinTun : ITun
         Marshal.Copy(packet, 0, buffer, packetLength);
         
         WintunSendPacket(_session, buffer);
+    }
+
+    public static void WaitUntilNewDataReceived()
+    {
+        var readWaitEvent = WintunGetReadWaitEvent(_session);
+        WaitForSingleObject(readWaitEvent, UInt32.MaxValue);
+        
     }
 
     

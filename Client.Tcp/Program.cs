@@ -123,8 +123,11 @@ class Program
         {
             var input = _tun.ReceivePacket();
             
-            //fix: пофиксить загрузку одного ядра в 100% через WintunGetReadWaitEvent (if (input == null) continue бесконечно по кругу крутиться и забивает весь поток)
-            if (input == null) continue;
+            if (input == null)
+            {
+                WinTun.WaitUntilNewDataReceived();
+                continue;
+            }
             
             var data = Crypto.AES.Encrypt(input, key);
             await Frame.WriteFrameAsync(tcpSocket,data);
