@@ -44,6 +44,16 @@ class Program
         {
             Socket client = await tcpSocket.AcceptAsync();
             client.NoDelay = true;
+
+            try
+            {
+                client.SetRawSocketOption((int)SocketOptionLevel.Tcp, 13, Encoding.UTF8.GetBytes("bbr"));
+            }
+            catch (Exception ex)
+            {
+                _serverTcpLogger.Debug($"невозможно задействовать Bbr, используем Cubic по умолчанию {ex}");
+            }
+            
             _serverTcpLogger.Information("клиент принят: {Client}", client.RemoteEndPoint);
             _ = HandleClientAsync(client);
             

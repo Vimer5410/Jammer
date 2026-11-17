@@ -17,6 +17,7 @@ public class SshService
         {
             using var ssh = new SshClient(ip, port, name, password);
             await ServerDelivery.DeployFromGithubAsync(ssh);
+            CheckAndInstallBbr(ssh);
             UpJammerService(ssh);
         }
     }
@@ -140,6 +141,29 @@ public class SshService
         
         
         _sshServiceLogger.Information("порт {port} успешно открыт", port);
+    }
+
+    private static void CheckAndInstallBbr(SshClient ssh)
+    {
+        using var bbr= ssh.RunCommand("sysctl -n net.ipv4.tcp_available_congestion_control | grep -i -w -q bbr");
+
+        if (bbr.ExitStatus==0)
+        {
+            _sshServiceLogger.Information("алгоритм Bbr присутствует в ядре");
+        }
+        else
+        {
+            using var installBbr = ssh.RunCommand("modprobe tcp_bbr");
+            if (installBbr.ExitStatus ==0)
+            {
+                ssh.RunCommand("echo tcp_bbr > /etc/modules-load.d/jammer-bbr.conf");
+                _sshServiceLogger.Information("алгоритм Bbr успешно установлен и запущен");
+            }
+            else
+            {
+                _sshServiceLogger.Error("не удалось установить Bbr {status} : {error}", installBbr.ExitStatus, installBbr.Error);
+            }
+        }
     }
 
     private static bool IsValidIpAddress(string ip)
